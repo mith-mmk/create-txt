@@ -1,0 +1,133 @@
+# runner.py 設定ファイルサンプル (version: 3)
+# 使い方: python runner.py examples/runner-example.yaml
+#         python runner.py examples/runner-example.yaml --dry-run
+
+version: 3
+
+# API ホスト（DSL の HOST コマンドで動的変更可能）
+host: http://localhost:7860
+comfyui_host: http://localhost:8188
+
+# ログ設定
+log:
+  path: ./log/runner.log
+  level: info
+  days: 7
+  print_levels: [ info, warning, error, critical ]
+
+# プロファイル定義
+profiles:
+
+  # ── txt2img プロファイル ──────────────────────────────────────────
+  txt2img:
+
+    # SFW 生成（SD WebUI / Forge）
+    sfw:
+      input: prompts/v2/prompts-v2-sfw.yaml
+      profile: xl # YAML 内プロファイル選択
+      models:
+        - realVisXL_v50.safetensors
+        - animagineXLV31_v31.safetensors
+      random_model: true
+      output: ./outputs/v2/
+      image_type: jpg
+      number: 20
+
+    # NSFW 生成
+    nsfw:
+      input: prompts/v2/prompts-v2-nsfwxl.yaml
+      profile: nsfw
+      models_file: prompts/csv/models.csv # CSV ファイルでモデルリスト管理
+      random_model: true
+      output: ./outputs/v2/
+      image_type: webp
+      options:
+        filename_pattern: "[num]-[seed]"
+
+  # ── img2img プロファイル ─────────────────────────────────────────
+  img2img:
+
+    retake:
+      input_dir: ./outputs/retake/batch
+      output: ./outputs/retake/result/
+      steps: 12
+      denoising_strength: 0.6
+      n_iter: 4
+      batch_size: 1
+      options:
+        image_type: jpg
+        filename_pattern: "img2img[num]-[seed][part]"
+      dir:
+        work: ./outputs/retake/.work
+        mask: ./outputs/retake/mask
+        ended: ./outputs/retake/.done
+
+  # ── img2txt2img プロファイル ─────────────────────────────────────
+  img2txt2img:
+
+    retake:
+      input_dir: ./outputs/retake/batch
+      output: ./outputs/retake/i2t2i/
+      models:
+        - realVisXL_v50.safetensors
+      overrides:
+        denoising_strength: 0.7
+        steps: 20
+
+  # ── ComfyUI ワークフロープロファイル ─────────────────────────────
+  comfyui:
+
+    anima_sfw:
+      workflow: prompts/workflows/anima-sfw.json
+      output: ./outputs/comfyui/
+      image_type: png
+      # overrides: ノード値の上書き（"node_id.field" または "field" 形式）
+      overrides:
+        positive: "${positive_prompt}" # ${var} 展開に対応
+        negative: "${negative_prompt}"
+
+    anima_nsfw:
+      workflow: prompts/workflows/anima-nsfw.json
+      output: ./outputs/comfyui/nsfw/
+      image_type: png
+
+# ── スクリプト ────────────────────────────────────────────────────────
+# temp/script.py 仕様に準拠した疑似プログラム
+# -----------------------------------------------------------------------
+script: |
+  # サーバー起動待ち
+  PING
+
+  # サーバー種別を自動検出
+  CHECKSERVER
+  SET server = EXITCODE
+  LOG サーバー種別: ${server}
+
+  # ComfyUI の場合はホストを切り替え
+  IF server == "comfyui"
+    HOST http://localhost:8188
+    LOG ComfyUI モード
+  ENDIF
+
+  # メインループ（-1 = 無限）
+  LOOP -1
+
+    # スケジュール確認（範囲外なら 60 秒待機して次のイテレーション）
+    CHECK 07:00-23:00
+
+    # 09:00-15:30 は nsfw 生成
+    IF server == "comfyui"
+      workflow anima_sfw
+    ELSE
+      txt2img nsfw
+    ENDIF
+
+    # モデルアンロードで VRAM 解放
+    UNLOAD
+
+    # img2img リテイク処理
+    img2img retake
+
+    SLEEP 5
+
+  ENDLOOP

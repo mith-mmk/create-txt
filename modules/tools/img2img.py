@@ -1,0 +1,85 @@
+"""
+modules/tools/img2img.py — DSL img2img コマンドの実装
+"""
+
+from __future__ import annotations
+
+import glob
+import os
+from typing import TYPE_CHECKING
+
+import modules.img2img as _img2img
+import modules.logger as logger
+
+if TYPE_CHECKING:
+    from modules.tools.context import RunnerContext
+
+Logger = logger.getDefaultLogger()
+
+
+def run(profile_name: str, context: "RunnerContext") -> bool:
+    """
+    DSL コマンド: img2img <profile_name>
+    context.config["profiles"]["img2img"][profile_name] の設定で img2img を実行する。
+    """
+    profile = context.get_profile("img2img", profile_name)
+    if not profile:
+        Logger.error(f"[img2img] profile not found: {profile_name}")
+        return False
+
+    host = context.effective_host()
+    dry_run = context.dry_run
+
+    input_dir = profile.get("input_dir") or profile.get("dir", {}).get("input", "")
+    if not input_dir:
+        Logger.error("[img2img] input_dir が未設定です")
+        return False
+
+    output_dir = profile.get("output") or profile.get("dir", {}).get(
+        "output", "./outputs"
+    )
+    work_dir = profile.get("dir", {}).get("work", "")
+    mask_dir = profile.get("dir", {}).get("mask", "")
+    ended_dir = profile.get("dir", {}).get("ended", "")
+
+    # 画像ファイル収集
+    exts = ("*.png", "*.jpg", "*.jpeg", "*.webp")
+    imagefiles: list[str] = []
+    for ext in exts:
+        imagefiles.extend(sorted(glob.glob(os.path.join(input_dir, ext))))
+
+    if not imagefiles:
+        Logger.info(f"[img2img] no images in {input_dir}")
+        return True
+
+    Logger.info(f"[img2img] {len(imagefiles)} images, output={output_dir}")
+
+    overrides: dict = {}
+    for key in ("steps", "denoising_strength", "n_iter", "batch_size", "sampler_name"):
+        if key in profile:
+            overrides[key] = profile[key]
+    # typo 互換
+    if "denosing_stringth" in profile and "denoising_strength" not in overrides:
+        overrides["denoising_strength"] = profile["denosing_stringth"]
+
+    opt: dict = dict(profile.get("options", {}))
+    opt["work_dir"] = work_dir
+    opt["ended_dir"] = ended_dir
+    opt["folder_suffix"] = profile.get("folder_suffix", "-images")
+
+    if dry_run:
+        Logger.info("[img2img] dry_run: skip img2img()")
+        return True
+
+    try:
+        _img2img.img2img(
+            imagefiles=imagefiles,
+            overrides=overrides,
+            base_url=host,
+            output_dir=output_dir,
+            opt=opt,
+        )
+        return True
+    except Exception as e:
+        Logger.error(f"[img2img] error: {e}")
+        return False
