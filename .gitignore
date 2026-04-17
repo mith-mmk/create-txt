@@ -22,3 +22,4 @@ tools/*.js
 .DS_Store
 pytest*
 .codex-tmp
+log/
