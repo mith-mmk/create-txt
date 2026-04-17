@@ -30,6 +30,31 @@ def getLogger(service_name="root") -> "LogPrint":
     return LogPrint(service_name)
 
 
+def closeLogger(service_name="root") -> None:
+    """Close one logger file handle if open."""
+    global Logger
+    if type(Logger) is not dict:
+        return
+    log = Logger.get(service_name)
+    if log is not None:
+        try:
+            log.close()
+        except Exception:
+            pass
+
+
+def closeAllLoggers() -> None:
+    """Close all logger file handles to release resources on shutdown."""
+    global Logger
+    if type(Logger) is not dict:
+        return
+    for log in list(Logger.values()):
+        try:
+            log.close()
+        except Exception:
+            pass
+
+
 class LogPrint:
     def __init__(self, service_name="root"):
         global Logger
@@ -246,6 +271,17 @@ class LogPrint:
 
     def stdout(self, *msg):
         print(*msg)
+
+    def close(self):
+        """Close the currently opened log file handle."""
+        if self.f is not None:
+            try:
+                self.f.flush()
+                self.f.close()
+            except Exception:
+                pass
+            finally:
+                self.f = None
 
 
 LogPrint("service")

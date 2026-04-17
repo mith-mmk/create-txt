@@ -350,7 +350,8 @@ class DSLInterpreter:
             from modules.tools.events import wait_ping
 
             host = args[0] if args else ctx.host
-            ok = wait_ping(host)
+            timeout = float(args[1]) if len(args) > 1 else 0
+            ok = wait_ping(host, timeout=timeout)
             ctx.exitcode = ok
             return
 

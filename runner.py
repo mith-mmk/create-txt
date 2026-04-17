@@ -22,7 +22,7 @@ runner.py — YAML ベース疑似プログラムのエントリーポイント
     days: 7
   profiles:
     txt2img:
-      nsfw:
+      sdxl:
         input: prompts/v2/prompts-v2-xl.yaml
         models: [checkpoint.safetensors]
         output: ./outputs/
@@ -71,72 +71,77 @@ def main(argv: list[str] | None = None) -> int:
         print(f"runner.py v{VERSION}")
         return 0
 
-    # --- 設定ファイルロード ---
-    config_path = args.config or DEFAULT_CONFIG
-    config = _load_config(config_path)
+    try:
+        # --- 設定ファイルロード ---
+        config_path = args.config or DEFAULT_CONFIG
+        config = _load_config(config_path)
 
-    if not config:
-        print(f"[runner] 設定ファイルが見つかりません: {config_path}", file=sys.stderr)
-        return 1
+        if not config:
+            print(
+                f"[runner] 設定ファイルが見つかりません: {config_path}", file=sys.stderr
+            )
+            return 1
 
-    # --- ロガー初期化 ---
-    log_cfg = config.get("log", {})
-    _setup_logger(log_cfg)
-    Logger = logger.getDefaultLogger()
-    Logger.info(f"[runner] start  config={config_path}  v{VERSION}")
+        # --- ロガー初期化 ---
+        log_cfg = config.get("log", {})
+        _setup_logger(log_cfg)
+        Logger = logger.getDefaultLogger()
+        Logger.info(f"[runner] start  config={config_path}  v{VERSION}")
 
-    # --- share にグローバル状態を登録（plugins との互換性） ---
-    share.set("config", config)
+        # --- share にグローバル状態を登録（plugins との互換性） ---
+        share.set("config", config)
 
-    # --- RunnerContext 生成 ---
-    from modules.tools.context import RunnerContext
+        # --- RunnerContext 生成 ---
+        from modules.tools.context import RunnerContext
 
-    host = args.host or config.get("host", "http://localhost:7860")
-    ctx = RunnerContext(config=config, host=host)
-    ctx.dry_run = args.dry_run
-    if config.get("comfyui_host"):
-        ctx.comfyui_host = config["comfyui_host"]
+        host = args.host or config.get("host", "http://localhost:7860")
+        ctx = RunnerContext(config=config, host=host)
+        ctx.dry_run = args.dry_run
+        if config.get("comfyui_host"):
+            ctx.comfyui_host = config["comfyui_host"]
 
-    # --- スクリプト取得 ---
-    script = _load_script(args, config)
-    if not script:
-        Logger.error(
-            "[runner] 実行するスクリプトが見つかりません (script: キーまたは --script を指定してください)"
-        )
-        return 1
+        # --- スクリプト取得 ---
+        script = _load_script(args, config)
+        if not script:
+            Logger.error(
+                "[runner] 実行するスクリプトが見つかりません (script: キーまたは --script を指定してください)"
+            )
+            return 1
 
-    # --- DSL 実行 ---
-    from modules.tools.dsl import BreakException, DSLInterpreter, ExitException
+        # --- DSL 実行 ---
+        from modules.tools.dsl import DSLInterpreter, ExitException
 
-    dsl = DSLInterpreter(ctx)
+        dsl = DSLInterpreter(ctx)
 
-    def _run_once() -> None:
-        try:
-            dsl.run(script)
-        except ExitException:
-            Logger.info("[runner] EXIT")
-            raise
-        except KeyboardInterrupt:
-            Logger.info("[runner] interrupted")
-            raise
+        def _run_once() -> None:
+            try:
+                dsl.run(script)
+            except ExitException:
+                Logger.info("[runner] EXIT")
+                raise
+            except KeyboardInterrupt:
+                Logger.info("[runner] interrupted")
+                raise
 
-    if args.loop:
-        Logger.info("[runner] --loop mode: run indefinitely")
-        while True:
+        if args.loop:
+            Logger.info("[runner] --loop mode: run indefinitely")
+            while True:
+                try:
+                    _run_once()
+                except ExitException:
+                    break
+                except KeyboardInterrupt:
+                    break
+        else:
             try:
                 _run_once()
-            except ExitException:
-                break
-            except KeyboardInterrupt:
-                break
-    else:
-        try:
-            _run_once()
-        except (ExitException, KeyboardInterrupt):
-            pass
+            except (ExitException, KeyboardInterrupt):
+                pass
 
-    Logger.info("[runner] done")
-    return 0
+        Logger.info("[runner] done")
+        return 0
+    finally:
+        _cleanup_runtime()
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +247,21 @@ def _setup_logger(log_cfg: dict) -> None:
         )
     except Exception:
         pass  # ロガー設定失敗は無視して続行
+
+
+def _cleanup_runtime() -> None:
+    """終了時の後始末。HTTP クライアントとロガーのハンドルを閉じる。"""
+    try:
+        import modules.api as api
+
+        api.shutdown()
+    except Exception:
+        pass
+
+    try:
+        logger.closeAllLoggers()
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
