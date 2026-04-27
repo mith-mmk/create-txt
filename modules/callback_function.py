@@ -36,7 +36,10 @@ class CallbackFunctions:
                             args[0], args[1], args[2], args[3], args[4]
                         )
                 case "choice":
-                    return self.getChained(args[0])
+                    choiced = self.getChained(args[0])
+                    # 最後の ,スペースを削除
+                    choiced = choiced.rstrip(", ")
+                    return choiced
                 case "value":
                     return self.getValue(args[0])
                 case "attribute":

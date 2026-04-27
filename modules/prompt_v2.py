@@ -111,7 +111,7 @@ def text_formula_v2(text, args):
         replace_text = compute.getCompute(formula, variables, attributes)
 
         if replace_text is not None:
-            text = text.replace("${=" + formula + "}", str(replace_text))
+            text = text.replace("${=" + formula + "}", str(replace_text), 1)
         else:
             error = compute.getError()
             raise Exception(f"Error happen formula {error_info} {formula}, {error}")
