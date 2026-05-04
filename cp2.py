@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-# !pip install pyyaml
-# !pip install Pillow
-# !pip install httpx
-
-# version 2.0 (C) 4 MITH@mmk  MIT License
-# 2.0dev1 2024-06-06
 
 import argparse
 import copy
 import json
 import os
+from functools import lru_cache
 
 import modules.api as api
 from modules.img2img import img2img
@@ -23,10 +18,426 @@ from modules.util import divide_values
 Logger = getDefaultLogger()
 
 
-def img2img_from_args(args):
+def parse_comfy_lora_arg(value):
+    target = "both"
+    if "@" in value:
+        value, target = value.rsplit("@", 1)
+        target = target.strip() or "both"
+    if ":" not in value:
+        return {"name": value.strip(), "weight": 1.0, "target": target}
+    name, weight = value.rsplit(":", 1)
+    return {"name": name.strip(), "weight": float(weight), "target": target}
+
+
+def parse_comfy_controlnet_arg(value):
+    if value.strip().startswith("{"):
+        return json.loads(value)
+    result = {}
+    for item in value.split(","):
+        if "=" not in item:
+            continue
+        key, val = item.split("=", 1)
+        key = key.strip()
+        val = val.strip()
+        if key in {"strength", "start_percent", "end_percent"}:
+            try:
+                result[key] = float(val)
+                continue
+            except ValueError:
+                pass
+        result[key] = val
+    return result
+
+
+def parse_comfy_node_arg(value):
+    if "=" not in value or "." not in value:
+        raise ValueError(
+            "comfy-node must be role.field=value or role.inputs.key=value format"
+        )
+    path, raw_value = value.split("=", 1)
+    parts = path.split(".")
+    role = parts[0]
+    payload = {}
+    current = payload
+    for part in parts[1:-1]:
+        current[part] = {}
+        current = current[part]
+    try:
+        parsed_value = json.loads(raw_value)
+    except Exception:
+        parsed_value = raw_value
+    current[parts[-1]] = parsed_value
+    return role, payload
+
+
+def merge_nested_dict(target, patch):
+    for key, value in patch.items():
+        if (
+            key in target
+            and isinstance(target[key], dict)
+            and isinstance(value, dict)
+        ):
+            merge_nested_dict(target[key], value)
+        else:
+            target[key] = value
+    return target
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(argument_default=None)
+    parser.add_argument("input", type=str, nargs="?", default=None)
+    parser.add_argument("--append-dir", type=str, default="./appends")
+    parser.add_argument("--output", type=str, default=None)
+    parser.add_argument("--json", type=bool, nargs="?", const=True, default=False)
+    parser.add_argument(
+        "--escape-filename", type=bool, nargs="?", const=True, default=False
+    )
+    parser.add_argument(
+        "--api-mode", "-x", type=bool, nargs="?", const=True, default=False
+    )
+    parser.add_argument(
+        "--api-base", "--hostname", "-H", type=str, default="http://127.0.0.1:7860"
+    )
+    parser.add_argument("--api-userpass", type=str, default=None)
+    parser.add_argument("--api-output-dir", "-o", type=str, default="outputs")
+    parser.add_argument("--api-input-json", "-i", type=str, default=None)
+    parser.add_argument("--api-filename-pattern", "-P", type=str, default=None)
+    parser.add_argument("--api-filname-pattern", type=str, default=None)
+    parser.add_argument("--max-number", "-N", type=int, default=-1)
+    parser.add_argument("--num-length", type=int, default=None)
+    parser.add_argument(
+        "--api-filename-variable",
+        type=bool,
+        nargs="?",
+        const=True,
+        default=False,
+    )
+    parser.add_argument(
+        "--json-verbose", "-j", type=bool, nargs="?", const=True, default=False
+    )
+    parser.add_argument("--num-once", type=bool, nargs="?", const=True, default=False)
+    parser.add_argument("--api-set-sd-model", "-C", type=str, default=None)
+    parser.add_argument("--api-set-sd-vae", "-V", type=str, default="Automatic")
+    parser.add_argument("--override", type=str, nargs="*", default=None)
+    parser.add_argument("--info", type=str, nargs="*", default=None)
+    parser.add_argument(
+        "--save-extend-meta", type=bool, nargs="?", const=True, default=False
+    )
+    parser.add_argument(
+        "--image-type",
+        type=str,
+        default="png",
+        choices=["jpg", "png", "webp"],
+    )
+    parser.add_argument("--image-quality", type=int, default=80)
+    parser.add_argument(
+        "--api-type",
+        "-t",
+        type=str,
+        default="txt2img",
+        choices=["txt2img", "img2img", "interrogate"],
+    )
+    parser.add_argument(
+        "--interrogate",
+        type=str,
+        choices=["clip", "deepdanbooru"],
+        default=None,
+    )
+    parser.add_argument("--model", type=str, default=None)
+    parser.add_argument("--alt-image-dir", type=str, default=None)
+    parser.add_argument("--mask-dirs", type=str, default=None)
+    parser.add_argument("--mask-blur", type=int, default=None)
+    parser.add_argument("--cn-images-dir", type=str, default=None)
+    parser.add_argument(
+        "--cn-save-pre", type=bool, nargs="?", const=True, default=False
+    )
+    parser.add_argument("--profile", "-p", type=str, default=None)
+    parser.add_argument("--values", "-v", type=str, default=None)
+    parser.add_argument(
+        "--api-comfy-save",
+        "--comfy-save",
+        "-S",
+        type=str,
+        default="save",
+        choices=["save", "both", "ui"],
+    )
+    parser.add_argument("--debug", type=bool, nargs="?", const=True, default=False)
+    parser.add_argument("--verbose", type=bool, nargs="?", const=True, default=False)
+    parser.add_argument("--v1json", type=bool, nargs="?", const=True, default=False)
+    parser.add_argument("--prompt", type=bool, nargs="?", const=True, default=False)
+    parser.add_argument(
+        "--json-escape", type=bool, nargs="?", const=True, default=False
+    )
+    parser.add_argument(
+        "--api-comfy", "-X", type=bool, nargs="?", const=True, default=False
+    )
+
+    parser.add_argument("--comfy", type=bool, nargs="?", const=True, default=False)
+    parser.add_argument(
+        "--comfy-mode",
+        type=str,
+        default=None,
+        choices=["txt2img", "img2img", "interrogate"],
+    )
+    parser.add_argument(
+        "--comfy-family",
+        type=str,
+        default=None,
+        choices=["sd15", "sdxl", "sd35", "flux", "anima"],
+    )
+    parser.add_argument("--comfy-template", type=str, default=None)
+    parser.add_argument("--comfy-image", type=str, default=None)
+    parser.add_argument("--comfy-mask", type=str, default=None)
+    parser.add_argument(
+        "--comfy-controlnet", action="append", default=None, dest="comfy_controlnet"
+    )
+    parser.add_argument("--comfy-lora", action="append", default=None, dest="comfy_lora")
+    parser.add_argument("--comfy-node", action="append", default=None, dest="comfy_node")
+    return parser
+
+
+@lru_cache(maxsize=1)
+def get_parser_defaults():
+    parser = build_parser()
+    defaults = {}
+    for action in parser._actions:
+        if action.dest != "help":
+            defaults[action.dest] = action.default
+    return defaults
+
+
+def resolve_arg_or_option(args, options, dest, option_key=None):
+    option_key = option_key or dest
+    value = getattr(args, dest, None)
+    default = get_parser_defaults().get(dest)
+    option_value = options.get(option_key)
+    if value is not None and value != default:
+        return value
+    if option_value is not None:
+        return option_value
+    return value
+
+
+def apply_logging_options(args):
+    if args.debug:
+        Logger.print_levels = [
+            "info",
+            "warning",
+            "error",
+            "critical",
+            "verbose",
+            "debug",
+        ]
+    if args.verbose:
+        Logger.print_levels = ["info", "warning", "error", "critical", "verbose"]
+
+
+def _resolve_save_image(comfy_save):
+    mode = comfy_save.lower()
+    if mode == "save":
+        return ["websocket"]
+    if mode == "both":
+        return ["ui", "save"]
+    if mode == "ui":
+        return ["ui"]
+    raise ValueError("api-comfy-save option error use [save, both, ui]")
+
+
+def resolve_filename_pattern(args, options):
+    defaults = get_parser_defaults()
+    if (
+        getattr(args, "api_filename_pattern", None) is not None
+        and args.api_filename_pattern != defaults.get("api_filename_pattern")
+    ):
+        return args.api_filename_pattern
+    if (
+        getattr(args, "api_filname_pattern", None) is not None
+        and args.api_filname_pattern != defaults.get("api_filname_pattern")
+    ):
+        return args.api_filname_pattern
+    return options.get("filename_pattern")
+
+
+def build_common_save_options(args, options):
     opt = {}
-    opt["sd_model"] = args.api_set_sd_model
-    opt["sd_vae"] = args.api_set_sd_vae
+    opt["save_extend_meta"] = bool(
+        resolve_arg_or_option(args, options, "save_extend_meta")
+    )
+    opt["image_type"] = resolve_arg_or_option(args, options, "image_type")
+    opt["image_quality"] = resolve_arg_or_option(args, options, "image_quality")
+    opt["escape_filename"] = bool(
+        resolve_arg_or_option(args, options, "escape_filename")
+    )
+    filename_pattern = resolve_filename_pattern(args, options)
+    if filename_pattern is not None:
+        opt["filename_pattern"] = filename_pattern
+    num_length = resolve_arg_or_option(args, options, "num_length")
+    if num_length is not None:
+        opt["num_length"] = num_length
+    num_once = resolve_arg_or_option(args, options, "num_once")
+    if num_once is not None:
+        opt["num_once"] = num_once
+    filename_variable = resolve_arg_or_option(args, options, "api_filename_variable")
+    if filename_variable is not None:
+        opt["api_filename_variable"] = bool(filename_variable)
+    return opt
+
+
+def normalize_comfy_args(args):
+    config = {
+        "enabled": bool(args.comfy or args.api_comfy),
+        "mode": args.comfy_mode or None,
+        "family": args.comfy_family,
+        "template": args.comfy_template,
+        "image": args.comfy_image,
+        "mask": args.comfy_mask,
+        "save": args.api_comfy_save,
+        "controlnet": [],
+        "loras": [],
+        "nodes": {},
+        "deprecated_flags_used": [],
+    }
+
+    if args.api_comfy:
+        config["deprecated_flags_used"].append("--api-comfy")
+    if args.api_comfy and args.api_comfy_save:
+        config["deprecated_flags_used"].append("--api-comfy-save")
+
+    if config["mode"] is None:
+        if args.api_comfy and args.api_type in {"txt2img", "img2img", "interrogate"}:
+            config["mode"] = args.api_type
+        else:
+            config["mode"] = "img2img" if config["image"] else "txt2img"
+
+    if config["image"] is None and config["mode"] == "img2img" and args.input:
+        if os.path.isfile(args.input):
+            config["image"] = args.input
+
+    if config["mask"] is None and args.mask_dirs:
+        config["mask"] = args.mask_dirs
+
+    for item in args.comfy_controlnet or []:
+        config["controlnet"].append(parse_comfy_controlnet_arg(item))
+    for item in args.comfy_lora or []:
+        config["loras"].append(parse_comfy_lora_arg(item))
+    for item in args.comfy_node or []:
+        role, payload = parse_comfy_node_arg(item)
+        config["nodes"].setdefault(role, {})
+        merge_nested_dict(config["nodes"][role], payload)
+
+    return config
+
+
+def _serialize_output_text(output_text, options, args):
+    if isinstance(output_text, str):
+        return output_text
+
+    text = copy.deepcopy(output_text)
+    if not options.get("verbose"):
+        for t in text:
+            if t.get("verbose"):
+                del t["verbose"]
+    elif args.v1json:
+        for t in text:
+            verbose = t.get("verbose", {})
+            variables = verbose.get("variables", {})
+            for variable in variables:
+                if len(variables[variable]) > 0:
+                    t.setdefault("variables", {})
+                    t["variables"][variable] = variables[variable][0]
+            info = verbose.get("info", {})
+            for item in info:
+                if len(info[item]) > 0:
+                    t.setdefault("info", {})
+                    t["info"][item] = info[item][0]
+            t.pop("verbose", None)
+            t.pop("array", None)
+    if args.prompt:
+        text = [item.get("prompt", "") for item in text]
+    if args.v1json or args.json_escape:
+        return json.dumps(text, indent=2)
+    return json.dumps(text, ensure_ascii=False, indent=2)
+
+
+def build_or_load_payload(args):
+    if args.input is not None:
+        opt = vars(args)
+        result = create_text_v2(opt)
+        if result is None:
+            return None
+        result["serialized_output"] = _serialize_output_text(
+            result.get("output_text", []), result.get("options", {}), args
+        )
+        return result
+
+    if args.api_input_json:
+        options = {}
+        yml = {}
+        with open(args.api_input_json, "r", encoding="utf-8") as f:
+            output_text = json.loads(f.read())
+        if args.v1json:
+            for t in output_text:
+                if "verbose" in t:
+                    verbose = t["verbose"]
+                    t["variables"] = copy.deepcopy(verbose.get("variables", {}))
+                    t["info"] = copy.deepcopy(verbose.get("info", {}))
+                    del t["verbose"]
+        if not isinstance(output_text, list):
+            output_text["verbose"] = output_text.get("verbose", {})
+            output_text = [output_text]
+        return {
+            "options": options,
+            "yml": yml,
+            "output_text": output_text,
+            "serialized_output": json.dumps(output_text, ensure_ascii=False, indent=2),
+        }
+
+    raise Exception("option error")
+
+
+def save_payload_if_needed(result, args):
+    options = result.get("options", {})
+    yml = result.get("yml", {})
+    output_filename = yml.get("options", {}).get("output")
+    if isinstance(output_filename, str):
+        saver = DataSaver()
+        saver.save_text(output_filename, result["serialized_output"])
+        Logger.info(f"outputed file creat {output_filename}")
+    return options, yml
+
+
+def build_webui_config(args, options, yml):
+    opt = build_common_save_options(args, options)
+    userpass = resolve_arg_or_option(args, options, "api_userpass", "userpass")
+    if userpass is not None:
+        opt["userpass"] = userpass
+    if "command" in yml:
+        opt["command"] = yml["command"]
+    if "info" in yml:
+        opt["info"] = yml["info"]
+    opt["sd_model"] = resolve_arg_or_option(args, options, "api_set_sd_model", "sd_model")
+    opt["sd_vae"] = resolve_arg_or_option(args, options, "api_set_sd_vae", "sd_vae")
+    opt["base_url"] = args.api_base
+    opt["cn_images_dir"] = args.cn_images_dir
+    opt["cn_save_pre"] = args.cn_save_pre
+    return opt
+
+
+def dispatch_interrogate(args):
+    filenames = [args.input] if isinstance(args.input, str) else args.input
+    for filename in filenames:
+        result = interrogate(filename, base_url=args.api_base, model=args.model)
+        Logger.info(result)
+        if result.status_code == 200:
+            Logger.info(filename)
+            Logger.info(result.json()["caption"])
+        else:
+            Logger.info(result.text)
+            Logger.info("Is Web UI replace newest version?")
+    return True
+
+
+def dispatch_webui_img2img(args):
     items = [
         "denoising_strength",
         "seed",
@@ -53,18 +464,13 @@ def img2img_from_args(args):
         for item in items:
             if overrides_arg.get(item):
                 overrides[item] = overrides_arg[item]
-    if type(args.input) is str:
-        filenames = [args.input]
-    base_url = args.api_base
+    filenames = [args.input] if isinstance(args.input, str) else []
     output_dir = args.api_output_dir or "./outputs"
-    dicted_args = vars(args)
     input_files = []
     for filename in filenames:
         if os.path.isdir(filename):
-            path = filename
-            files = os.listdir(path)
-            for file in files:
-                file = os.path.join(path, file)
+            for file in os.listdir(filename):
+                file = os.path.join(filename, file)
                 if os.path.isfile(file):
                     input_files.append(file)
         elif os.path.isfile(filename):
@@ -72,588 +478,122 @@ def img2img_from_args(args):
     if len(input_files) == 0:
         Logger.error("no exit files")
         return False
-
-    if dicted_args.get("sd_model") is not None:
+    img_opt = build_webui_config(args, {}, {})
+    sd_model = img_opt.get("sd_model")
+    sd_vae = img_opt.get("sd_vae")
+    if sd_model is not None:
         api.set_sd_model(
-            dicted_args.get("sd_model"),
-            base_url=base_url,
-            sd_vae=dicted_args.get("sd_vae"),
+            base_url=args.api_base,
+            sd_model=sd_model,
+            sd_vae=sd_vae,
         )
-
-    opt = {}
-
-    opt_keys = [
-        "alt_image_dir",
-        "interrogate",
-        "filename_pattern",
-        "api_filename_variables",
-        "verbose",
-        "mask_dir",
-        "userpass",
-        "num_once",
-        "num_length",
-        "cn_images_dir",
-        "cn_save_pre",
-    ]
-    for key in opt_keys:
-        if dicted_args.get(key) is not None:
-            opt[key] = dicted_args.get(key)
-
-    try:
-        img2img(
-            input_files,
-            base_url=base_url,
-            overrides=overrides,
-            output_dir=output_dir,
-            opt=opt,
-        )
-    except Exception as e:
-        Logger.error("img2img error")
-        Logger.info(e)
-        return False
+    img_opt["alt_image_dir"] = args.alt_image_dir
+    img_opt["interrogate"] = args.interrogate
+    img_opt["verbose"] = args.verbose
+    img_opt["mask_dir"] = args.mask_dirs
+    img2img(
+        input_files,
+        base_url=args.api_base,
+        overrides=overrides,
+        output_dir=output_dir,
+        opt=img_opt,
+    )
     return True
 
 
-def interrogate_from_args(args):
-    base_url = args.api_base
-    if type(args.input) is str:
-        filenames = [args.input]
-    else:
-        filenames = args.input
-    # model = 'deepdanbooru' need set webui --deepdanbooru option
-    for filename in filenames:
-        result = interrogate(
-            filename, base_url=base_url, model=args.model
-        )  # 'clip' or 'deepdanbooru'
-        Logger.info(result)
-        if result.status_code == 200:
-            Logger.info(filename)
-            Logger.info(result.json()["caption"])
-        else:
-            Logger.info(result.text)
-            Logger.info("Is Web UI replace newest version?")
+def dispatch_webui(args, payload, options, yml):
+    if args.api_type == "img2img":
+        return dispatch_webui_img2img(args)
+    if args.api_type == "interrogate":
+        return dispatch_interrogate(args)
+
+    opt = build_webui_config(args, options, yml)
+    sd_model = opt.get("sd_model")
+    sd_vae = opt.get("sd_vae")
+    if sd_model is not None:
+        api.set_sd_model(base_url=args.api_base, sd_model=sd_model, sd_vae=sd_vae)
+    result = txt2img(
+        payload, base_url=args.api_base, output_dir=args.api_output_dir, opt=opt
+    )
+    return bool(result)
+
+
+def dispatch_comfy(args, payload, options, yml, comfy_config):
+    from modules.comfyui import ComufyClient
+
+    for flag in comfy_config.get("deprecated_flags_used", []):
+        Logger.warning(f"{flag} is deprecated, use --comfy* options")
+
+    save_image = _resolve_save_image(comfy_config["save"])
+    opt = build_common_save_options(args, options)
+    opt.update(
+        {
+        "sd_model": resolve_arg_or_option(args, options, "api_set_sd_model", "sd_model"),
+        "sd_vae": resolve_arg_or_option(args, options, "api_set_sd_vae", "sd_vae"),
+        "save_image": save_image,
+        "workflow_family": comfy_config.get("family"),
+        "workflow_mode": comfy_config.get("mode"),
+        "workflow_template": comfy_config.get("template"),
+        }
+    )
+    if opt["sd_vae"] == "Automatic":
+        opt["sd_vae"] = None
+    if comfy_config.get("image") is not None:
+        opt["image"] = comfy_config["image"]
+    if comfy_config.get("mask") is not None:
+        opt["mask"] = comfy_config["mask"]
+    if comfy_config.get("controlnet"):
+        opt["controlnet"] = comfy_config["controlnet"]
+    if comfy_config.get("loras"):
+        opt["loras"] = comfy_config["loras"]
+    if comfy_config.get("nodes"):
+        opt["nodes"] = comfy_config["nodes"]
+    result = ComufyClient.txt2img(
+        payload,
+        hostname=args.api_base,
+        output_dir=args.api_output_dir,
+        options=opt,
+    )
+    return bool(result)
+
+
+def dispatch_backend(args, payload_result, comfy_config):
+    options = payload_result.get("options", {})
+    yml = payload_result.get("yml", {})
+    payload = payload_result.get("output_text", [])
+
+    if comfy_config["enabled"]:
+        return dispatch_comfy(args, payload, options, yml, comfy_config)
+    if args.api_mode:
+        return dispatch_webui(args, payload, options, yml)
+    return True
 
 
 def main(args):
-    if args.api_mode:
-        if args.api_type == "img2img":
-            img2img_from_args(args)
-            return True
-        if args.api_type == "interrogate":
-            interrogate_from_args(args)
-            return True
     if args.api_comfy and args.api_mode:
         Logger.error("api-comfy and api-mode is not same time")
         return False
-    save_image = []
-    if args.api_comfy:
-        save_mode = args.api_comfy_save.lower()
-        if save_mode == "save":
-            save_image = ["websocket"]
-        elif save_mode == "both":
-            save_image = ["ui", "save"]
-        elif save_mode == "ui":
-            save_image = ["ui"]
-        else:
-            Logger.error("api-comfy-save option error use [save, both, ui]")
-            return False
 
-    if args.input is not None:
-        Logger.debug(f"input: {args.input}")
-        try:
-            # arg ->dict
-            opt = vars(args)
-            Logger.debug(opt)
-            try:
-                result = create_text_v2(opt)
-            except Exception as e:
-                Logger.error(f"create_text error create_text_v2 in {e}")
-                raise Exception("create_text error")
-            if result is None:
-                return False
-            options = result.get("options", {})
-            output_text = result.get("output_text", [])
-            yml = result.get("yml", {})
-            output_filename = yml.get("options", {}).get("output")
-            if isinstance(output_filename, str):  # Replace '==' with 'is'
-                Logger.debug(f"output_filename: {output_filename}")
-                try:
-                    text = ""
-                    if isinstance(output_text, str):
-                        text = output_text
-                    else:
-                        if not options.get("verbose"):
-                            text = copy.deepcopy(output_text)
-                            for t in text:
-                                if t.get("verbose"):
-                                    del t["verbose"]
-                        else:
-                            # verbose mode
-                            if not args.v1json:
-                                text = output_text
-                            else:
-                                # conver v2 to v1
-                                Logger.debug("v1json")
-                                text = copy.deepcopy(output_text)
-                                for t in text:
-                                    verbose = t.get("verbose", {})
-                                    variables = verbose.get("variables", {})
-                                    for variable in variables:
-                                        if len(variables[variable]) > 0:
-                                            if "variables" not in t:
-                                                t["variables"] = {}
-                                            item = variables[variable][0]
-                                            t["variables"][variable] = item
-                                    info = verbose.get("info", {})
-                                    for item in info:
-                                        if len(info[item]) > 0:
-                                            if "info" not in t:
-                                                t["info"] = {}
-                                            t["info"][item] = info[item][0]
-                                    if "verbose" in t:
-                                        del t["verbose"]
-                                    if "array" in t:
-                                        del t["array"]
-                        if args.prompt:
-                            new_text = []
-                            for item in text:
-                                new_text.append(item.get("prompt", ""))
-                            text = new_text
-                        if args.v1json:
-                            text = json.dumps(text, indent=2)  # escape unicode
-                        else:
-                            if args.json_escape:
-                                text = json.dumps(text, indent=2)
-                            else:
-                                text = json.dumps(text, ensure_ascii=False, indent=2)
-                    if output_filename is not None:
-                        saver = DataSaver()
-                        saver.save_text(output_filename, text)
-                except Exception as e:
-                    Logger.error(f"output error {e}")
-                    raise Exception("output error")
-                    return False
-                Logger.info(f"outputed file creat {output_filename}")
-        except Exception as e:
-            Logger.error(f"create_text error create_text_v2 in {e}")
-            return False
-
-    elif args.api_input_json:
-        options = {}
-        yml = {}
-        with open(args.api_input_json, "r", encoding="utf-8") as f:
-            output_text = json.loads(f.read())
-            # if v1josn conver from v2 to v1
-            if args.v1json:
-                Logger.debug("v1json")
-                for t in output_text:
-                    if "verbose" in t:
-                        verbose = t["verbose"]
-                        variables = verbose.get("variables", {})
-                        info = verbose.get("info", {})
-                        t["variables"] = copy.deepcopy(variables)
-                        t["info"] = copy.deepcopy(info)
-                        del t["verbose"]
-            if not isinstance(output_text, list):
-                output_text["verbose"] = output_text.get("verbose", {})
-                output_text = [output_text]
-    else:
-        Logger.error("option error, no input file")
-        raise Exception("option error")
-
-    opt = {}
-
-    opt["save_extend_meta"] = args.save_extend_meta
-    opt["image_type"] = args.image_type
-    opt["image_quality"] = args.image_quality
-
-    if options.get("filename_pattern"):
-        args.api_filename_pattern = (
-            args.api_filname_pattern or options["filename_pattern"]
-        )
-    if args.api_filename_pattern is not None:
-        opt["filename_pattern"] = args.api_filename_pattern
-
-    if args.num_length is not None:
-        opt["num_length"] = args.num_length
-
-    if args.api_userpass is not None:
-        opt["userpass"] = args.api_userpass
-
-    if args.num_once is not None:
-        opt["num_once"] = args.num_once
-
-    if "command" in yml:
-        opt["command"] = yml["command"]
-
-    if "info" in yml:
-        opt["info"] = yml["info"]
-
-    opt["escape_filename"] = args.escape_filename or options.get(
-        "escape_filename", False
-    )
-
-    if args.api_mode:
-        sd_model = args.api_set_sd_model or options.get("sd_model")
-        sd_vae = args.api_set_sd_vae or options.get("sd_vae", "Automatic")
-        opt["sd_model"] = sd_model
-        opt["sd_vae"] = sd_vae
-        opt["base_url"] = args.api_base
-        opt["cn_images_dir"] = args.cn_images_dir
-        opt["cn_save_pre"] = args.cn_save_pre
-        if sd_model is not None:
-            api.set_sd_model(base_url=args.api_base, sd_model=sd_model, sd_vae=sd_vae)
-        # api.init()
-        Logger.verbose("api mode")
-        Logger.verbose(f"base_url: {args.api_base} output_dir: {args.api_output_dir}")
-        Logger.verbose(f"output_text: {output_text} opt: {opt}")
-        result = txt2img(
-            output_text, base_url=args.api_base, output_dir=args.api_output_dir, opt=opt
-        )
-        Logger.debug(result)
-        if not result:
-            return False
-        # api.shutdown()
-    elif args.api_comfy:
-        import modules.comfyui as comfyui
-
-        sd_model = args.api_set_sd_model or options.get("sd_model")
-        sd_vae = args.api_set_sd_vae or options.get("sd_vae", "None")
-        if sd_vae == "Automatic":
-            sd_vae = None
-        opt["sd_model"] = sd_model
-        opt["sd_vae"] = sd_vae
-        opt["save_image"] = save_image
-
-        result = comfyui.ComufyClient.txt2img(
-            output_text,
-            hostname=args.api_base,
-            output_dir=args.api_output_dir,
-            options=opt,
-        )
-
-        Logger.debug(result)
-        if not result:
-            return False
-    return True
+    comfy_config = normalize_comfy_args(args)
+    payload_result = build_or_load_payload(args)
+    if payload_result is None:
+        return False
+    save_payload_if_needed(payload_result, args)
+    return dispatch_backend(args, payload_result, comfy_config)
 
 
 def run_from_args(command_args=None):
-    parser = argparse.ArgumentParser(argument_default=None)
-    parser.add_argument(
-        "input",
-        type=str,
-        nargs="?",
-        default=None,
-        help="input promptfile or image file for img2img",
-    )
-    parser.add_argument(
-        "--append-dir",
-        type=str,
-        default="./appends",
-        help="direcory of input append prompt files",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=None,
-        help="direcory of output file of prompt list file",
-    )
-
-    parser.add_argument(
-        "--json", type=bool, nargs="?", const=True, default=False, help="output JSON"
-    )
-    parser.add_argument(
-        "--escape-filename",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="INVALID_CHARS escape urlencode filename, default replace _ only",
-    )
-
-    parser.add_argument(
-        "--api-mode",
-        "-x",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="output api force set --json",
-    )
-
-    parser.add_argument(
-        "--api-base",
-        "--hostname",
-        "-H",
-        type=str,
-        default="http://127.0.0.1:7860",
-        help="direct call api e.g http://127.0.0.1:7860",
-    )
-
-    parser.add_argument(
-        "--api-userpass", type=str, default=None, help="API username:password"
-    )
-
-    parser.add_argument(
-        "--api-output-dir",
-        "-o",
-        type=str,
-        default="outputs",
-        help="api output images directory",
-    )
-
-    parser.add_argument(
-        "--api-input-json",
-        "-i",
-        type=str,
-        default=None,
-        help="api direct inputs from a json file",
-    )
-
-    parser.add_argument(
-        "--api-filename-pattern",
-        "-P",
-        type=str,
-        default=None,
-        help="api outputs filename pattern default: [num]-[seed]",
-    )
-
-    parser.add_argument(
-        "--max-number",
-        "-N",
-        type=int,
-        default=-1,
-        help="override option.number for yaml mode",
-    )
-
-    parser.add_argument(
-        "--num-length",
-        type=int,
-        default=None,
-        help="override seaquintial number length for filename : default 5",
-    )
-
-    parser.add_argument(
-        "--api-filename-variable",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="replace variables use filename, obsolete option",
-    )
-
-    parser.add_argument(
-        "--json-verbose",
-        "-j",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="verbose file output mode replace from --api-filename-variable option",
-    )
-
-    parser.add_argument(
-        "--num-once",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="Search once file number",
-    )
-    parser.add_argument(
-        "--api-set-sd-model",
-        "-C",
-        type=str,
-        default=None,
-        help='Change sd model "[Filename]" e.g. wd-v1-3 for "wd-v1-3.ckpt"',
-    )
-
-    parser.add_argument(
-        "--api-set-sd-vae",
-        "-V",
-        type=str,
-        default="Automatic",
-        help='Change sd vae "[Filename]" e.g. "Anything-V3.0.vae.pt", None is not using VAE',
-    )
-
-    #    --command_override="width=768, height=1024,"....
-    parser.add_argument(
-        "--override",
-        type=str,
-        nargs="*",
-        default=None,
-        help='command oveeride ex) "width=768, height=1024"',
-    )
-    parser.add_argument(
-        "--info", type=str, nargs="*", default=None, help="add infomation"
-    )
-    parser.add_argument(
-        "--save-extend-meta",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="save extend meta data",
-    )
-    parser.add_argument(
-        "--image-type",
-        type=str,
-        default="png",
-        help="image type jpg, png or webp",
-        choices=["jpg", "png", "webp"],
-    )
-    parser.add_argument(
-        "--image-quality",
-        type=int,
-        default=80,
-        help="image quality 1-100",
-    )
-
-    # img2img
-
-    parser.add_argument(
-        "--api-type",
-        "-t",
-        type=str,
-        default="txt2img",
-        choices=["txt2img", "img2img", "interrogate"],
-        help='call API type "txt2img", "img2img", "interrogate" default txt2img',
-    )
-
-    parser.add_argument(
-        "--interrogate",
-        type=str,
-        choices=["clip", "deepdanbooru"],
-        default=None,
-        help='If an image does not have prompt, it uses alternative interrogate API or api-type="interrogate". model "clip" or "deepdanbooru"',
-    )
-
-    parser.add_argument(
-        "--alt-image-dir",
-        type=str,
-        default=None,
-        help="Alternative input image files diretory for img2img",
-    )
-
-    parser.add_argument(
-        "--mask-dirs", type=str, default=None, help="Mask images directory for img2img"
-    )
-
-    parser.add_argument(
-        "--mask-blur", type=int, default=None, help="Mask blur for img2img"
-    )
-
-    parser.add_argument(
-        "--cn-images-dir", type=str, default=None, help="ControlNet images directory"
-    )
-
-    parser.add_argument(
-        "--cn-save-pre",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="ControlNet save preproccessed images",
-    )
-
-    # profiles
-
-    parser.add_argument(
-        "--profile",
-        "-p",
-        type=str,
-        default=None,
-        help="profile for create prompt, profile is override yml",
-    )
-
-    # replace value
-    parser.add_argument(
-        "--values",
-        "-v",
-        type=str,
-        default=None,
-        help="values for create prompt, values is override yml\nex) -v width=768;height=1024 -> ${width} in yaml is replaced by 768, ${height} is replaced by 1024",
-    )
-
-    # comfyui
-
-    parser.add_argument(
-        "--api-comfy-save",
-        "--comfy-save",
-        "-S",
-        type=str,
-        default="save",
-        choices=["save", "both", "ui"],
-        help="on save place for comfyui api ui(save to comfyui), save(save to local, webui like metadata), both(save to both, comfyui metadata)",
-    )
-
-    parser.add_argument(
-        "--debug", type=bool, nargs="?", const=True, default=False, help="debug mode"
-    )
-
-    parser.add_argument(
-        "--verbose", type=bool, nargs="?", const=True, default=False, help="verbose"
-    )
-
-    parser.add_argument(
-        "--v1json",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="output v1 json",
-    )
-
-    parser.add_argument(
-        "--prompt",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="output prompt only",
-    )
-
-    parser.add_argument(
-        "--json-escape",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="multibyte escaped json",
-    )
-
-    # comfyui
-    parser.add_argument(
-        "--api-comfy",
-        "-X",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="use comfyui api alternative to webui",
-    )
-
+    parser = build_parser()
     args = parser.parse_args(command_args)
     if args.values:
         args.values = divide_values(args.values)
+    apply_logging_options(args)
 
-    if args.debug:
-        Logger.print_levels = [
-            "info",
-            "warning",
-            "error",
-            "critical",
-            "verbose",
-            "debug",
-        ]
-    if args.verbose:
-        Logger.print_levels = ["info", "warning", "error", "critical", "verbose"]
     if args.input is None and not (
-        (args.api_mode or args.api_comfy) and args.api_input_json is not None
+        (args.api_mode or args.api_comfy or args.comfy) and args.api_input_json is not None
     ):
         parser.print_help()
-        Logger.info("need [input] or --api-mode --api_input_json [filename]")
+        Logger.info("need [input] or api/comfy input json")
         return False
     return main(args)
 

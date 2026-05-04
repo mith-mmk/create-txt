@@ -73,6 +73,17 @@ def save_images_wapper(r, opt={"dir": "./outputs"}):
     asyncio.run(async_save_images(r, opt=opt))
 
 
+def merge_generation_parameters(meta, direct_parameters=None):
+    parameters = create_parameters(meta)
+    direct_parameters = direct_parameters or {}
+    for key, value in direct_parameters.items():
+        if value is None:
+            continue
+        if key not in parameters or parameters[key] in ("", None, "[]"):
+            parameters[key] = value
+    return parameters
+
+
 async def create_files(r, opt={"dir": "./outputs"}):
     nameseed = opt.get("filename_pattern", "[num]-[seed]")
     need_names = re.findall(r"\[.+?\]", nameseed)
@@ -218,7 +229,7 @@ async def async_save_images(r, opt={"dir": "./outputs"}):
                 image = Image.open(io.BytesIO(base64.b64decode(i)))
             else:
                 image = Image.open(io.BytesIO(i))
-            parameters = create_parameters(meta)
+            parameters = merge_generation_parameters(meta, r.get("parameters"))
             Logger.debug("parameters are", parameters)
 
             filename = create_filename(

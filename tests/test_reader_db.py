@@ -15,14 +15,12 @@ import_jsonl_to_db = _JSONL2DB_MODULE.import_jsonl_to_db
 
 
 def make_test_dir(name):
-    path = Path(__file__).resolve().parents[1] / ".codex-tmp" / f"{name}-{uuid4().hex}"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return Path(__file__).resolve().parents[1]
 
 
 def test_read_file_v2_reads_sqlite_rows_with_schema():
     test_dir = make_test_dir("test_reader_db_schema")
-    db_file = test_dir / "items.sqlite3"
+    db_file = test_dir / f"test_reader_db_schema-{uuid4().hex}.sqlite3"
     conn = sqlite3.connect(db_file)
     try:
         conn.execute(
@@ -81,7 +79,7 @@ def test_read_file_v2_reads_sqlite_rows_with_schema():
 
 def test_jsonl2db_import_creates_readable_rows():
     test_dir = make_test_dir("test_jsonl2db_import")
-    jsonl_file = test_dir / "sample.jsonl"
+    jsonl_file = test_dir / f"test_jsonl2db_import-{uuid4().hex}.jsonl"
     jsonl_file.write_text(
         "\n".join(
             [
@@ -91,7 +89,7 @@ def test_jsonl2db_import_creates_readable_rows():
         ),
         encoding="utf-8",
     )
-    db_file = test_dir / "import.sqlite3"
+    db_file = test_dir / f"test_jsonl2db_import-{uuid4().hex}.sqlite3"
 
     count = import_jsonl_to_db(str(jsonl_file), str(db_file), "date_items")
 
@@ -121,20 +119,9 @@ def test_jsonl2db_import_creates_readable_rows():
 
 def test_jsonl2db_import_recursively_loads_directory():
     test_dir = make_test_dir("test_jsonl2db_recursive")
-    root_dir = test_dir / "jsonl"
-    (root_dir / "animals").mkdir(parents=True, exist_ok=True)
-    (root_dir / "humans").mkdir(parents=True, exist_ok=True)
+    root_dir = test_dir / "tests" / "data" / "jsonl_recursive"
 
-    (root_dir / "animals" / "eyes.jsonl").write_text(
-        '{"W": 0.1, "C": ["animal"], "V": "blue eyes", "kind": "cat"}\n',
-        encoding="utf-8",
-    )
-    (root_dir / "humans" / "eyes.jsonl").write_text(
-        '{"W": 0.2, "C": ["human"], "V": "green eyes", "kind": "person"}\n',
-        encoding="utf-8",
-    )
-
-    db_file = test_dir / "recursive.sqlite3"
+    db_file = test_dir / f"test_jsonl2db_recursive-{uuid4().hex}.sqlite3"
     count = import_jsonl_to_db(str(root_dir), str(db_file), "jsonl_items")
 
     assert count == 2

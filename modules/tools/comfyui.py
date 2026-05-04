@@ -22,6 +22,8 @@ import os
 import re
 from typing import TYPE_CHECKING, Any
 
+import yaml
+
 import modules.logger as logger
 
 if TYPE_CHECKING:
@@ -86,9 +88,11 @@ def run_workflow(
         Logger.error(f"[comfyui] workflow file not found: {workflow_file}")
         return False
 
-    # JSON 読み込み → ${var} 展開 + overrides 適用
     with open(workflow_file, encoding="utf-8") as f:
-        workflow: dict = json.load(f)
+        if workflow_file.endswith(".yaml") or workflow_file.endswith(".yml"):
+            workflow = yaml.safe_load(f) or {}
+        else:
+            workflow = json.load(f)
 
     workflow = _apply_overrides(workflow, overrides, context)
 
@@ -103,8 +107,12 @@ def run_workflow(
     try:
         from modules.comfyui import ComufyClient
 
+        payload = workflow
+        if "family" in workflow or "mode" in workflow or "nodes" in workflow:
+            payload = {"comfyui": workflow}
+
         ComufyClient.txt2img(
-            prompts=[workflow],
+            prompts=[payload],
             hostname=hostname,
             output_dir=output_dir,
             options=opt_profile,
