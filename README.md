@@ -127,12 +127,12 @@ options:
 
 You can direct run Web UI API(直接実行可能です)
 ```
-python cp2.py input.yaml --api-mode --api-base http://localhost:7860 --api-output ./outputs/text-images --api-filename-pattern [num]-[seed]
+python cp2.py input.yaml --api-mode --api-base http://localhost:7860 --api-output-dir ./outputs/text-images --api-filename-pattern [num]-[seed]
 ```
 
 If you run from JSON file, use --input-json option(JSONファイルを実行する場合は、--input-jsonを使います)
 ```
-python cp2.py --input-json "./outputs/examples.json" --api-output ./outputs/text-images --api-filename_pattern [DATE]-[num]-[seed]
+python cp2.py --api-input-json "./outputs/examples.json" --api-output-dir ./outputs/text-images --api-filename-pattern [DATE]-[num]-[seed]
 ```
 
 
@@ -149,15 +149,31 @@ python cp2.py --input-json "./outputs/examples.json" --api-output ./outputs/text
 
 # Usage(使い方)
 ```
-usage: cp2.py [-h] [--append-dir APPEND_DIR] [--output OUTPUT] [--json [JSON]] [--api-mode [API_MODE]] [--api-base API_BASE] [--api-userpass API_USERPASS]
-              [--api-output-dir API_OUTPUT_DIR] [--api-input-json API_INPUT_JSON] [--api-filename-pattern API_FILENAME_PATTERN] [--max-number MAX_NUMBER]
-              [--num-length NUM_LENGTH] [--api-filename-variable [API_FILENAME_VARIABLE]] [--json-verbose [JSON_VERBOSE]] [--num-once [NUM_ONCE]]
-              [--api-set-sd-model API_SET_SD_MODEL] [--api-set-sd-vae API_SET_SD_VAE] [--override [OVERRIDE ...]] [--info [INFO ...]]
-              [--save-extend-meta [SAVE_EXTEND_META]] [--image-type IMAGE_TYPE] [--image-quality IMAGE_QUALITY] [--api-type API_TYPE] [--interrogate INTERROGATE]
-              [--alt-image-dir ALT_IMAGE_DIR] [--mask-dirs MASK_DIRS] [--mask-blur MASK_BLUR] [--profile PROFILE] [--debug [DEBUG]] [--verbose [VERBOSE]]
-              [--v1json [V1JSON]] [--prompt [PROMPT]] [--json-escape [JSON_ESCAPE]]
+usage: cp2.py [-h] [--append-dir APPEND_DIR] [--output OUTPUT] [--json [JSON]] [--escape-filename [ESCAPE_FILENAME]]
+              [--api-mode [API_MODE]] [--api-base API_BASE] [--api-userpass API_USERPASS]
+              [--api-output-dir API_OUTPUT_DIR] [--api-input-json API_INPUT_JSON]
+              [--api-filename-pattern API_FILENAME_PATTERN] [--api-filname-pattern API_FILNAME_PATTERN]
+              [--max-number MAX_NUMBER] [--num-length NUM_LENGTH]
+              [--api-filename-variable [API_FILENAME_VARIABLE]] [--json-verbose [JSON_VERBOSE]]
+              [--num-once [NUM_ONCE]] [--api-set-sd-model API_SET_SD_MODEL]
+              [--api-set-sd-vae API_SET_SD_VAE] [--override [OVERRIDE ...]] [--info [INFO ...]]
+              [--save-extend-meta [SAVE_EXTEND_META]] [--image-type {jpg,png,webp}]
+              [--image-quality IMAGE_QUALITY] [--api-type {txt2img,img2img,interrogate}]
+              [--interrogate {clip,deepdanbooru}] [--model MODEL] [--alt-image-dir ALT_IMAGE_DIR]
+              [--mask-dirs MASK_DIRS] [--mask-blur MASK_BLUR] [--cn-images-dir CN_IMAGES_DIR]
+              [--cn-save-pre [CN_SAVE_PRE]] [--profile PROFILE]
+              [--api-comfy-save {save,both,ui}] [--api-comfy [API_COMFY]]
+              [--comfy [COMFY]] [--comfy-mode {txt2img,img2img,interrogate}]
+              [--comfy-family {sd15,sdxl,sd35,flux,anima}] [--comfy-template COMFY_TEMPLATE]
+              [--comfy-image COMFY_IMAGE] [--comfy-mask COMFY_MASK]
+              [--comfy-controlnet COMFY_CONTROLNET] [--comfy-lora COMFY_LORA] [--comfy-node COMFY_NODE]
+              [--debug [DEBUG]] [--verbose [VERBOSE]] [--v1json [V1JSON]]
+              [--prompt [PROMPT]] [--json-escape [JSON_ESCAPE]]
               [input]
 ```
+
+The parser is still changing. For the exact current list, `python cp2.py --help` is canonical.
+(引数はまだ増減しているため、正確な最新一覧は `python cp2.py --help` を参照してください)
 
   -h, --help            show this help message and exit(ヘルプ表示)
 
@@ -200,7 +216,8 @@ usage: cp2.py [-h] [--append-dir APPEND_DIR] [--output OUTPUT] [--json [JSON]] [
                         Change sd model "Filename.ckpt [hash]" e.g. "wd-v1-3.ckpt [84692140]" or 84692140 (SDモデルを変更する 例: "wd-v1-3" または 84692140)
 
   --api-set-sd-vae VAE_FILE
-                        set vaefile(include extention) (VAEファイルを設定する。拡張子は省略できません)
+                        set vaefile(include extention). `Automatic` is valid for WebUI, but ComfyUI converts it to no explicit VAE override.
+                        (VAEファイルを設定する。拡張子は省略できません。`Automatic` はWebUIでは有効ですが、ComfyUIではVAE未指定として扱います)
 
   --override
                         command oveeride ex= "width=768, height=1024"(コマンドを上書きする 例: "width=768, height=1024")
@@ -275,10 +292,13 @@ text mode is obsolete(textモードは廃止になりました)
 
 ```yaml
 version: 2          # must(必須)
+import:
+    - ./add_profile.yaml # import add yaml files (yamlインポート 基本profileを分割するのに使う)
 options:
     output: ./outputs/v2.json
     json: true
     number: 10   # number of prompt(プロンプトの数) multipleの場合は配列数がかけ算される
+
 methods:  # random: 1  or multiple: array
     - preset: model  # presets(プリセット) only choice once(最初に一度だけ選択)
     - exclude : date # exclude choice in "random", run random exclude variables will be clear("random"で除外する変数)
@@ -287,7 +307,7 @@ methods:  # random: 1  or multiple: array
     - choice: actions  # values choice before run "random" method(randomの実行前に値を選択)
     - random: 0 # random use after multiple must set 0(mutipleの後にrandomを使う場合は0を設定する)
     - creanup: prompt # clean up prompt (promptをクリーンアップ)
-variables:
+variables: # 変数
     model:
         - xd.safetesors
         - sd15.safetesors
@@ -296,10 +316,10 @@ variables:
         - sitting
     date: jsonl/date.jsonl[animal] # jsonl file and category query(カテゴリークエリー)
     
-array:
-    char: [cat, dog, bird, fish]
-    place: [room, garden, park, street]
-command:
+array: # マルチプル用配列
+    char: [cat, dog, bird, fish] # make prompt matrix of cat, dog, bird, and fish
+    place: [room, garden, park, street] # make prompt matrix of room, garden, park, and street
+command: # command  workflow.json <- driect worlkflow.json setting for Comfy UI
     prompt: "${char} is ${actions} in ${place}, ${date}" # prompt command(プロンプトコマンド)
     negative_prompt: "negative prompt"
     seed: -1        # -1 is random seed(-1はランダムシード)
@@ -425,17 +445,37 @@ Example(例)
 - issue: query is not supported(クエリーはサポートされていません)
 
 ### DB query
- issue #2 DB query is not supported, yet (DBクエリーはまだサポートされていません)
+SQLite DB query is supported. (SQLite の DB クエリーをサポートしています)
 
 ```yaml
-options:
-    db: true
 database:
-    db: sqlite3 # [sqlite3, mysql, postgresql, mongodb]
+    db: sqlite3
     db_connection: db/date.sqlite3  # db connection(データベース接続)
 variables:
-    date: date[category = `animal`] # select * from date where category = `animal`'
+    date: date_items[category = `animal`]
+    cat: date_items[category = `animal` and animal = `cat`]
+    named: date_items[__name__ = `animals__eyes`]
 ```
+
+DB rows use this schema:
+(DB の基本スキーマは次の通りです)
+
+```text
+name, category, weight, variable, attributes(json)
+```
+
+Frequently used attributes can also be expanded into columns. `attributes` is still kept as JSON.
+(よく使う attribute は列として展開できますが、元の `attributes` JSON も保持されます)
+
+`tools/jsonl2db.py` imports `.jsonl` into SQLite and can recurse directories.
+(`tools/jsonl2db.py` は `.jsonl` を SQLite に取り込みでき、ディレクトリの再帰投入にも対応しています)
+
+```shell
+python tools/jsonl2db.py ./jsonl ./db/items.sqlite3
+```
+
+When a directory is given, `__name__` is generated from the relative path.
+(ディレクトリを指定した場合、`__name__` は相対パスから生成されます)
 
 ### query suffixies add 2025/07/06
  The query suffixies is enable query suffix(クエリーサフィックスを有効にする)
@@ -615,21 +655,72 @@ functions(関数) str1,str2,.. are string(文字列) and x,y... are number(数�
 - \[info:key\]: info key(情報キー)
 
 # ComfyUI
-- --api-comfy option is use ComfyUI API(--api-comfyを指定するとComfyUI APIを使います)
+ComfyUI flags are update.
+- --comfy option is use ComfyUI API(--comfyを指定するとComfyUI APIを使います) --api-comfy option is deprecated.
 - Try to create workflow to run prompt in comfy(promptをcomfyで実行できるようにワークフローを作成を試みます)
-- At present, only txt2img is supported, and hires.fix is not supported(現時点でサポートされているのはtxt2imgのみで、hires.fixはサポートされていません)
-- You can also load workflow directly. Save the workflow for the API in ComfyUI(workflowを直接読み込むことも可能です。ComfyUIでAPI用のworkflowを保存してください)
-- When you run the workflow directly, the behavior of the --api-comfy-save option is not guaranteed(Workflowを直接実行した場合、--api-comfy-saveオプションの挙動は保証されません)
+- txt2img and img2img are supported. mask is treated as img2img + mask. hires.fix is not auto-generated.
+  (txt2img と img2img をサポートしています。mask は img2img + mask として扱います。hires.fix の自動生成は未対応です)
+- Auto workflow families: `sd15`, `sdxl`, `sd35`, `flux`, `anima`
+  (自動 workflow 生成の対応 family)
+- You can also load workflow directly. Save the workflow for the API in ComfyUI, or use YAML DSL with `comfyui:` / `workflow:`.
+  (workflow を直接読み込むこともできます。ComfyUI の API 用 workflow JSON に加えて、`comfyui:` / `workflow:` DSL も使えます)
+- Local save converts metadata to Automatic1111-like infotext and filename replacers such as `[seed]`, `[var:name]`, `[var:name:attr]`.
+  (ローカル保存時は Automatic1111 風の infotext と `[seed]`, `[var:name]`, `[var:name:attr]` などの filename replacer を使えます)
+- Some features for compatibility WebUI, ex. Scheduler, model file names(WebUIとの互換性維持のためのいくつかの補完機能)
+- When you use websocket, SaveImageWebsocket node name MUST be `save_image_websocket_node`. WebSocketを利用する場合、SaveImageWebsocketのworkflowの名前が`save_image_websocket_node`である必要があります。
+  ```json
+  "save_image_websocket_node": {
+      "inputs": {
+        "images": [
+          "A66",
+          0
+        ]
+      },
+      "class_type": "SaveImageWebsocket",
+      "_meta": {
+        "title": "画像を保存するWebSocket"
+      }
+    },
+  ```
+## ComfyUI options
+- `--comfy-family`: select workflow family `sd15|sdxl|sd35|flux|anima` (ワークフローファミリーを選択します)
+- `--comfy-mode`: `txt2img|img2img|interrogate` (ファンクションを選択します)
+- `--comfy-template`: use saved workflow / template file instead of pure auto-generated graph (workflowビルダー用のテンプレートを指定します)
+- `--comfy-image`: img2img input image
+- `--comfy-mask`: img2img mask image
+- `--comfy-controlnet`: append ControlNet settings. accepts JSON or `key=value,key=value`
+- `--comfy-lora`: append LoRA chain. format `name[:weight][@positive|negative|both]`
+- `--comfy-node`: override node definitions. format `role.field=value` or `role.inputs.key=value`
 
 ## direct run workflow(ワークフローを直接実行)
 ```shell
-python cp2.py --api-output-dir ./outputs/txt2img-images --api-comfy --api-base http://localhost:8188 --image-type webp --api-input-json ./workflow_api.json
+python cp2.py --api-output-dir ./outputs/txt2img-images --comfy --api-base http://localhost:8188 --image-type webp --api-input-json ./workflow_api.json
 ```
+
+## direct run img2img(ComfyUI)
+```shell
+python cp2.py prompt.yaml --comfy --comfy-mode img2img --comfy-family flux --comfy-image ./inputs/src.png --comfy-mask ./inputs/mask.png --api-base http://localhost:8188
+```
+
+## anima template example
+The practical `anima` example is based on a saved workflow like `UNETLoader -> ModelSamplingAuraFlow -> KSampler`, plus `CLIPLoader` and `VAELoader`.
+(`anima` の実用例は `UNETLoader -> ModelSamplingAuraFlow -> KSampler` と `CLIPLoader`, `VAELoader` を使う保存済み workflow ベースです)
+
+- YAML example: [examples/anima-template.yaml](/c:/Users/misir/OneDrive/source/python/create-txt/examples/anima-template.yaml)
+- Workflow JSON example: [examples/anima-template-api.json](/c:/Users/misir/OneDrive/source/python/create-txt/examples/anima-template-api.json)
+
+Run example:
+```shell
+python cp2.py ./examples/anima-template.yaml --comfy --api-base http://localhost:8188 --api-output-dir ./outputs/anima-example
+```
+
+`_controlnet_slots` is optional. If present, `controlnet[0].image` etc. can be injected into the saved workflow.
+(`_controlnet_slots` は任意です。定義すると `controlnet[0].image` などを保存済み workflow に注入できます)
 
 ## Use workflow instead of prompt(Promptの代わりにWorkflowを使う)
 
 ```shell
-python cp2.py prompts/prompt.yaml --api-output-dir ./outputs/txt2img-images --api-comfy --api-base http://localhost:8188 --image-type webp -api-base http://localhost:8188 --max-number 1 --api-filename-pattern '[num]-[seed]'
+python cp2.py prompts/prompt.yaml --api-output-dir ./outputs/txt2img-images --comfy --api-base http://localhost:8188 --image-type webp --max-number 1 --api-filename-pattern '[num]-[seed]'
 ```
 
 
@@ -741,36 +832,36 @@ command: ./workflows_apijson
 
 # issue(問題)
  - issue #1 nseted associative array is not supported(入れ子の連想配列はサポートされていません)
- - issue #2 DB query is not supported, yet (DBクエリーはまだサポートされていません)
+ - issue #2 SQLite only for DB query right now (DBクエリーは現状 SQLite のみ対応です)
  - issue #3 nested profile is not supported(入れ子プロファイルはサポートされていません)
  - issue #4 multi thread is not supported(マルチスレッドはサポートされていません)
  - arrayed attributes(配列アトリビュート)
 
 # todo: until V2(V2までの予定)
 ## completed(完了)
- - ✓ new create prompt(新しいcreate prompt)
- - ✓ support ComfyUI API(ComfyUI APIのサポート)
-   - ✓ workflow checker(ワークフローチェッカー)
-   - ✓ create WebUI like workflow(WebUIの様なWorkflowの作成)
- - ✓ support jsonl(サポートjsonl)
- - ✓ support profile(プロファイルのサポート)
- - ✓ powerful paser(パーサーの強化)
- - ✓ Support Controlnet in txt2img(txt2imgでControlnetをサポート)
- - ✓ support attribute(アトリビュートのサポート)
- - ✓ categroy query for jsonl(jsonl カテゴリークエリー)
- - ✓ support webp(webpのサポート)
- - ✓ buckground save images(バックグラウンドで画像を保存)
- - ✓ save images with subfolder(画像を保存にサブフォルダを指定)
- - ✓ fix log rotation logic(ログローテーションロジックの修正)
+ - [x] new create prompt(新しいcreate prompt)
+ - [x] support ComfyUI API(ComfyUI APIのサポート)
+   - [x] workflow checker(ワークフローチェッカー)
+   - [x] create WebUI like workflow(WebUIの様なWorkflowの作成)
+ - [x] support jsonl(サポートjsonl)
+ - [x] support profile(プロファイルのサポート)
+ - [x] powerful paser(パーサーの強化)
+ - [x] Support Controlnet in txt2img(txt2imgでControlnetをサポート)
+ - [x] support attribute(アトリビュートのサポート)
+ - [x] categroy query for jsonl(jsonl カテゴリークエリー)
+ - [x] support webp(webpのサポート)
+ - [x] buckground save images(バックグラウンドで画像を保存)
+ - [x] save images with subfolder(画像を保存にサブフォルダを指定)
+ - [x] fix log rotation logic(ログローテーションロジックの修正)
 ## todo
  - convert tools(json, jsonl, txt, csv)
- - create workflow sd3 for ComfyUI(ComfyUI用のsd3ワークフローの作成) 
+ - [x] create workflow sd3 for ComfyUI(ComfyUI用のsd3ワークフローの作成) 
  - category query for json(json カテゴリークエリー)
- - support forge API, Forge API has many bugs, yet(Forge APIのサポート、ForgeのAPIは、未だ多くのバグがあり挙動が不安定)
+ - [x] support forge API, Forge API has many bugs, yet(Forge APIのサポート、ForgeのAPIは、未だ多くのバグがあり挙動が不安定)
  - adjustment arguments(引数の調整) arguments from profile(プロファイルからの引数) →　v2.1 or later
  - Class based codes(クラスベースのコード)　→ v2.1 or later
- - more ComfyUI support(ComfyUIのサポートを強化) img2img, hires.fix　→ v2.1 or later
- - jpg, webp saves warkflow for ComfyUI(ComfyUI用のjpg, webpワークフロー保存 --comfy-metadata)　→ v2.1 or later
+ - [x] more ComfyUI support(ComfyUIのサポートを強化) img2img, hires.fix　→ v2.1 or later
+ - [x] jpg, webp saves warkflow for ComfyUI(ComfyUI用のjpg, webpワークフロー保存 --comfy-metadata)　→ v2.1 or later
  - Support Controlnet in img2img(img2imgでControlnetをサポート) → v2.1 or later
  - support upscaling(アップスケーリングのサポート) → v2.1 or later
  - more functions(関数の追加) → v2.1 or later
@@ -778,7 +869,7 @@ command: ./workflows_apijson
 # feature: until V3(V3までの予定)
  - programing language like parser(プログラミング言語のようなパーサー)
  - configuration tools(設定ツール)
- - support database(データベースのサポート)
+ - support database backends other than SQLite(SQLite 以外のデータベース対応)
  - extention for WebUI(WebUIのextention)
  - custom node for ComfyUI(ComfyUIのカスタムノード)
  - support "segment anything" ("segment anything"のサポート)

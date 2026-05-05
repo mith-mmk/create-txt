@@ -1,0 +1,156 @@
+{
+  "A3": {
+    "inputs": {
+      "text": "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, censored, ${negative}",
+      "clip": [
+        "A70",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "negative"
+    }
+  },
+  "A4": {
+    "inputs": {
+      "text": "${prompt}",
+      "clip": [
+        "A70",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "positive"
+    }
+  },
+  "A29": {
+    "inputs": {
+      "vae_name": "${vae}"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "vae_loader"
+    }
+  },
+  "A57": {
+    "inputs": {
+      "shift": "${shift}",
+      "model": [
+        "A67",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "model_adapter"
+    }
+  },
+  "A63": {
+    "inputs": {
+      "seed": "${seed}",
+      "steps": "${steps}",
+      "cfg": "${cfg_scale}",
+      "sampler_name": "${sampler_name}",
+      "scheduler": "${scheduler}",
+      "denoise": 1,
+      "model": [
+        "A57",
+        0
+      ],
+      "positive": [
+        "A4",
+        0
+      ],
+      "negative": [
+        "A3",
+        0
+      ],
+      "latent_image": [
+        "A95",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "sampler"
+    }
+  },
+  "A66": {
+    "inputs": {
+      "samples": [
+        "A63",
+        0
+      ],
+      "vae": [
+        "A29",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "vae_decode"
+    }
+  },
+  "A67": {
+    "inputs": {
+      "unet_name": "${model}",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "model_loader"
+    }
+  },
+  "A70": {
+    "inputs": {
+      "clip_name": "${clip_name}",
+      "type": "${clip_type}",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "clip_loader"
+    }
+  },
+  "A95": {
+    "inputs": {
+      "width": "${width}",
+      "height": "${height}",
+      "batch_size": "${batch_size}"
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "latent"
+    }
+  },
+  "A110": {
+    "inputs": {
+      "image": "controlnet.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "control_image"
+    }
+  },
+  "_controlnet_slots": {
+    "0": {
+      "node_id": "A110",
+      "field": "image"
+    }
+  },
+  "save_image_websocket_node": {
+    "inputs": {
+      "images": [
+        "A66",
+        0
+      ]
+    },
+    "class_type": "SaveImageWebsocket",
+    "_meta": {
+      "title": "save_image_websocket_node"
+    }
+  }
+}

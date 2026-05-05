@@ -1,0 +1,42 @@
+version: 2
+options:
+  output: ./outputs/anima-template.json
+  json: true
+  number: 1
+
+methods:
+  - random: 0
+
+variables:
+  model:
+    - anima\animayume_v03.safetensors
+  vae:
+    - qwen_image_vae.safetensors
+  clip_name:
+    - Qwen3-0.6B-Base.safetensors
+  clip_type:
+    - stable_diffusion
+  shift:
+    - "3"
+  seed:
+    - ${=random_int()}
+  prompt:
+    - 1girl, anime style, detailed eyes
+  negative:
+    - masterpiece, safe
+  width:
+    - "832"
+  height:
+    - "1216"
+  batch_size:
+    - "1"
+  steps:
+    - "28"
+  cfg_scale:
+    - "4"
+  sampler_name:
+    - euler
+  scheduler:
+    - normal
+
+command: ./examples/anima-template-api.json
