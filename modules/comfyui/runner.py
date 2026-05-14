@@ -14,7 +14,13 @@ from PIL import Image
 from modules.save import DataSaver
 
 from .checker import WorkflowChecker
-from .workflow import ComfyUIWorkflow, build_comfyui_spec, printError, printInfo, printWarning
+from .workflow import (
+    ComfyUIWorkflow,
+    build_comfyui_spec,
+    printError,
+    printInfo,
+    printWarning,
+)
 
 
 class ComufyClient:
@@ -53,15 +59,36 @@ class ComufyClient:
                 out = ws.recv()
                 if isinstance(out, str):
                     message = json.loads(out)
-                    if message["type"] == "executing":
-                        data = message["data"]
+                    msg_type = message.get("type")
+                    data = message["data"]
+                    if msg_type == "executing":
                         if data["prompt_id"] == prompt_id:
                             if data["node"] is None:
                                 duration = datetime.datetime.now() - start_time
-                                print(f"Execution is done {duration.total_seconds():.2f} sec")
+                                print(
+                                    f"Execution is done {duration.total_seconds():.2f} sec"
+                                )
                                 break
                             current_node = data["node"]
+                    elif msg_type == "progress":
+                        value = data.get("value")
+                        max_value = data.get("max")
+                        node = data.get("node") or current_node
+                        duration = datetime.datetime.now() - start_time
+                        print(
+                            f"\033[Kprogress node={node}: {value}/{max_value} {duration.total_seconds():.2f} sec",
+                            end="\r",
+                        )
+
+                    elif msg_type == "executed":
+                        node = data.get("node")
+                        output = data.get("output")
+                        print(f"\033[Kexecuted node={node}, output={output}", end="\r")
+
+                    elif msg_type == "execution_error":
+                        raise RuntimeError(data)
                 elif current_node == "save_image_websocket_node":
+                    print("\033[K")
                     output_images.setdefault(current_node, []).append(out[8:])
             return output_images
         except KeyboardInterrupt:
@@ -132,12 +159,16 @@ class ComufyClient:
             save_options["command"] = prompt_text["command"]
         return save_options
 
-    async def saveImage(self, image_data, prompt, options=None, info=None, prompt_text=None):
+    async def saveImage(
+        self, image_data, prompt, options=None, info=None, prompt_text=None
+    ):
         options = options or {}
         info = info or {}
         prompt_text = prompt_text or {}
         try:
-            r, options = await self.imageWrapper([image_data], prompt_text, options, info)
+            r, options = await self.imageWrapper(
+                [image_data], prompt_text, options, info
+            )
             options = self.build_save_options(options, prompt_text)
             options["workflow"] = json.dumps(prompt, ensure_ascii=False)
             if self.saver is None:
@@ -150,13 +181,15 @@ class ComufyClient:
             imagename = datetime.datetime.now().strftime("%H%M%S")
             image.save(f"{directory}/img{imagename}.png")
 
-    async def uploadImage(self, filename, binary=None, minetype="image/png", overwrite=False):
+    async def uploadImage(
+        self, filename, binary=None, minetype="image/png", overwrite=False
+    ):
         if binary is None:
             with open(filename, "rb") as f:
                 binary = f.read()
         payload = {"image": (os.path.basename(filename), binary, minetype)}
         if overwrite:
-            payload["overwrite"] = True
+            payload["overwrite"] = True  # type: ignore
         res = await self.client.post(f"{self.hostname}/upload/image", files=payload)
         if res.status_code != 200:
             raise Exception(res.text)
@@ -172,7 +205,11 @@ class ComufyClient:
             image_path = node.get("inputs", {}).get("image")
             if isinstance(image_path, str) and os.path.exists(image_path):
                 uploaded = await self.uploadImage(image_path, overwrite=True)
-                name = uploaded.get("name") or uploaded.get("filename") or os.path.basename(image_path)
+                name = (
+                    uploaded.get("name")
+                    or uploaded.get("filename")
+                    or os.path.basename(image_path)
+                )
                 node["inputs"]["image"] = name
         return workflow
 
@@ -196,7 +233,9 @@ class ComufyClient:
                     if seed > 0:
                         current_info["seed"] = seed
                         seed += 1
-                    await self.saveImage(image_data, prompt, options, current_info, prompt_text)
+                    await self.saveImage(
+                        image_data, prompt, options, current_info, prompt_text
+                    )
             ws.close()
 
     def run(self, prompt, options=None):
@@ -217,7 +256,13 @@ class ComufyClient:
         return all(isinstance(node, dict) for node in workflow.values())
 
     @staticmethod
-    def txt2img(prompts, vae=None, hostname="http://127.0.0.1:8188", output_dir="outputs", options=None):
+    def txt2img(
+        prompts,
+        vae=None,
+        hostname="http://127.0.0.1:8188",
+        output_dir="outputs",
+        options=None,
+    ):
         try:
             options = options or {}
             sd_model = options.get("sd_model", None)
@@ -243,20 +288,28 @@ class ComufyClient:
                         }
                     )
                     continue
-                if prompt_text.get("prompt") is None and prompt_text.get("comfyui") is None and prompt_text.get("workflow") is None:
+                if (
+                    prompt_text.get("prompt") is None
+                    and prompt_text.get("comfyui") is None
+                    and prompt_text.get("workflow") is None
+                ):
                     workflow = json.loads(json.dumps(prompt_text))
                     workflow.pop("verbose", None)
                     workflow, info = client.checkWorkflow(workflow, opt)
                     if info is None:
                         continue
-                    workflows.append({"workflow": workflow, "info": info, "prompt_text": prompt_text})
+                    workflows.append(
+                        {"workflow": workflow, "info": info, "prompt_text": prompt_text}
+                    )
                     continue
 
                 spec, merged = build_comfyui_spec(prompt_text, opt)
                 if spec.get("model") is None:
                     spec["model"] = sd_model
                 n_iter = prompt_text.get("n_iter", 1)
-                sampler_name = merged.get("sampler_name", prompt_text.get("sampler_name"))
+                sampler_name = merged.get(
+                    "sampler_name", prompt_text.get("sampler_name")
+                )
                 if sampler_name is not None:
                     spec.setdefault("sampling", {})
                     spec["sampling"]["sampler_name"] = sampler_name
@@ -272,7 +325,9 @@ class ComufyClient:
                         continue
                     if checked:
                         info.update(checked)
-                    workflows.append({"workflow": workflow, "info": info, "prompt_text": prompt_text})
+                    workflows.append(
+                        {"workflow": workflow, "info": info, "prompt_text": prompt_text}
+                    )
                     if seed > 0:
                         seed += info.get("batch_size", 1)
             options = dict(options)
