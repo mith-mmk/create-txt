@@ -60,7 +60,7 @@ class ComufyClient:
                 if isinstance(out, str):
                     message = json.loads(out)
                     msg_type = message.get("type")
-                    data = message["data"]
+                    data = message.get("data", {})
                     if msg_type == "executing":
                         if data["prompt_id"] == prompt_id:
                             if data["node"] is None:
@@ -82,13 +82,10 @@ class ComufyClient:
 
                     elif msg_type == "executed":
                         node = data.get("node")
-                        output = data.get("output")
-                        print(f"\033[Kexecuted node={node}, output={output}", end="\r")
-
                     elif msg_type == "execution_error":
                         raise RuntimeError(data)
                 elif current_node == "save_image_websocket_node":
-                    print("\033[K")
+                    print(f"\033[K")
                     output_images.setdefault(current_node, []).append(out[8:])
             return output_images
         except KeyboardInterrupt:
