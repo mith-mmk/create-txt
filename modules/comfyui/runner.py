@@ -76,8 +76,8 @@ class ComufyClient:
                         node = data.get("node") or current_node
                         duration = datetime.datetime.now() - start_time
                         print(
-                            f"\033[Kprogress node={node}: {value}/{max_value} {duration.total_seconds():.2f} sec",
-                            end="\r",
+                            f"\r\033[Kprogress node={node}: {value}/{max_value} {duration.total_seconds():.2f} sec",
+                            end="",
                         )
 
                     elif msg_type == "executed":
@@ -85,7 +85,7 @@ class ComufyClient:
                     elif msg_type == "execution_error":
                         raise RuntimeError(data)
                 elif current_node == "save_image_websocket_node":
-                    print(f"\033[K")
+                    print(f"\r\033[K", end="")
                     output_images.setdefault(current_node, []).append(out[8:])
             return output_images
         except KeyboardInterrupt:
