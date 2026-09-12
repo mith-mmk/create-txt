@@ -189,6 +189,10 @@ async def async_save_images(r, opt={"dir": "./outputs"}):
 
     Logger.debug("deepcopy opt")
     opt = copy.deepcopy(opt)
+    # Legacy img2img callers use verbose as a logging flag, whereas generated
+    # prompts use it for a metadata mapping.
+    if "verbose" in opt and not isinstance(opt["verbose"], dict):
+        opt.pop("verbose")
     Logger.debug("aysnc_save_images")
     try:
         filename_pattern, need_names, num, nameseed = await create_files(r, opt)
@@ -207,8 +211,9 @@ async def async_save_images(r, opt={"dir": "./outputs"}):
 
     Logger.debug("info", info)
     Logger.verbose("save images", len(r["images"]))
-
+    saved_count = 0
     for n, i in enumerate(r["images"]):
+        filename = "<unresolved>"
         Logger.verbose(
             f"save image {n + 1} of {len(r['images'])}, {len(info['infotexts'])}"
         )
@@ -250,15 +255,16 @@ async def async_save_images(r, opt={"dir": "./outputs"}):
 
             extendend_meta = get_extendmeta(meta, variables, opt)
             image_save(image, filename, meta, extendend_meta, opt)
+            saved_count += 1
 
         except KeyboardInterrupt:
             Logger.error("Process stopped Ctrl+C break")
             raise KeyboardInterrupt
         except BaseException as e:
             Logger.error("save error", e, filename)
-            # raise e
+            raise
     #    opt['startnum'] = num
-    return len(r["images"])
+    return saved_count
 
 
 def get_variables(opt):
@@ -546,6 +552,7 @@ def image_save(image, filename, meta, extendend_meta, opt={}):
             image.save(filename, "webp", exif=exif_bytes, quality=quality)
         except Exception as e:
             Logger.error("save webp error", e)
+            raise
     else:
         Logger.debug("save png", filename)
         pnginfo = PngImagePlugin.PngInfo()
@@ -559,4 +566,5 @@ def image_save(image, filename, meta, extendend_meta, opt={}):
             image.save(filename, pnginfo=pnginfo)
         except Exception as e:
             Logger.error("save png error", e)
+            raise
     Logger.debug("saved")

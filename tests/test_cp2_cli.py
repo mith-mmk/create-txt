@@ -2,6 +2,15 @@ import cp2
 import os
 
 
+def test_explicit_parser_default_overrides_yaml():
+    args = cp2.build_parser().parse_args(["--image-type", "png", "--api-set-sd-vae", "Automatic"])
+    opt = cp2.build_webui_config(args, {"image_type": "webp", "sd_vae": ["vae"]}, {})
+    assert opt["image_type"] == "png"
+    assert opt["sd_vae"] == "Automatic"
+    args = cp2.build_parser().parse_args(["-VAutomatic"])
+    assert cp2.build_webui_config(args, {"sd_vae": ["vae"]}, {})["sd_vae"] == "Automatic"
+
+
 def test_normalize_comfy_args_from_legacy_flags():
     parser = cp2.build_parser()
     args = parser.parse_args(["--api-comfy", "--api-type", "img2img", "--mask-dirs", "mask.png"])

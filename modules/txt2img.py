@@ -1,4 +1,5 @@
 import base64
+import copy
 import json
 import os
 
@@ -6,7 +7,7 @@ import modules.api as api
 import modules.share as share
 from modules.extentions import parse_extentions, xyz_parse
 from modules.logger import getDefaultLogger
-from modules.save import DataSaver
+from modules.save import save_images
 
 Logger = getDefaultLogger()
 
@@ -19,9 +20,9 @@ def txt2img(
     output_dir="./outputs",
     opt={},
 ):
-    saver = DataSaver()
     base_url = api.normalize_base_url(base_url)
-    url = base_url + "/sdapi/v1/txt2img"
+    mode = opt.get("api_type", "txt2img")
+    url = base_url + "/sdapi/v1/" + mode
     progress = base_url + "/sdapi/v1/progress?skip_current_image=true"
     Logger.info("Enter API mode, connect", url)
     dir = output_dir
@@ -39,7 +40,9 @@ def txt2img(
     else:
         userpass = None
 
-    for n, item in enumerate(output_text):
+    succeeded = 0
+    for n, original in enumerate(output_text):
+        item = copy.deepcopy(original)
         Logger.info(f"API loop {n + 1} of {count}")
         share.set("line_count", 0)
         print(f"\033[KBatch {n + 1} of {count}")
@@ -56,7 +59,7 @@ def txt2img(
         if "script_name" in item:
             item = xyz_parse(item)
         if "alwayson_scripts" in item:
-            parse_extentions(base_url, item, opt)
+            parse_extentions(base_url, item, opt, method=mode)
 
         payload = json.dumps(item)
         response = api.request_post_wrapper(
@@ -75,10 +78,16 @@ def txt2img(
             continue
 
         r = response.json()
+        if not r.get("images"):
+            Logger.error("Generation returned no images")
+            continue
         opt["filepart"] = part
-        prt_cnt = saver.save_images(r, opt=opt)
+        prt_cnt = save_images(r, opt=opt)
+        if prt_cnt:
+            succeeded += 1
         # prt_cnt = save_images(r, opt=opt)
         if share.get("line_count"):
             prt_cnt += share.get("line_count")
             share.set("line_count", 0)
     print("")
+    return count > 0 and succeeded == count

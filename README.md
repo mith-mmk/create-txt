@@ -538,6 +538,138 @@ load_profile is profile load in profile(プロファイルから他のプロフ�
 This case is preload profile defaut next animal, last xl (この場合、デフォルトプロファイル -> animalを先に読み込みます)
 load_profile is not suport nested profile(プロファイルは入れ子にできません)
 
+## Forge Neo / conditional profiles
+
+Forge Neo supports the WebUI-compatible `txt2img` and `img2img` APIs. Start the
+server with `--api`; the default connection is `http://localhost:7860` and can be
+changed with `--api-base`. The supported static-image families follow the
+[Neo README](https://github.com/Haoming02/sd-webui-forge-classic/blob/neo/README.md).
+Video models, PiD/upscalers, VAEs and text encoders are not `model_type` families.
+SD2/SD3 are unavailable on Neo; existing WebUI/ComfyUI support remains separate.
+
+### 設定の適用順
+
+**基本YAML → 通常profile → model_profile（親→子）→ ui_profile → CLI上書き**
+
+`model_profile` / `ui_profile` はトップレベルのマッピングです。各項目には通常の
+profileと同じ `command`、`options`、`variables`、`array`、`methods`、`load_profile`
+などを記述できます。辞書は再帰マージ、配列・スカラーは置換、空の項目は何もしません。
+`load_profile` は既存の `profiles` を1段だけ先に読み込みます。
+`base_yaml` / `import` の読込順は従来どおりです。
+
+```yaml
+version: 2
+options:
+  ui_type: neo
+  model_type: noobai
+  json: true
+methods: [{random: 1}]
+command: {prompt: "a cat"}
+model_profile:
+  sdxl:
+    command: {width: 1024, height: 1024}
+  illustrius:
+    command: {cfg_scale: 5}
+  noobai:
+    command: {cfg_scale: 4}
+ui_profile:
+  neo:
+    command: {scheduler: Normal}
+```
+
+`options.model_type` / `options.ui_type` を省略すると自動判定します。
+`--model-type` / `--ui-type` はYAMLより優先します。UI種別は
+`webui` / `forge` / `neo` / `comfy`。Neoは`ui_profile.forge`を継承しません。
+種別指定だけではAPI送信しません。WebUI系は`--api-mode`、ComfyUIは`--comfy`
+を使います。ComfyUIフラグと異なるUI種別の同時指定はエラーです。
+
+判定と条件別profileの適用は、通常profileの後・変数展開とmethods実行の前に
+**1実行につき一度**行います。条件別profile内で種別を書き換えても再判定しません。
+異なるモデル系統をランダムに混ぜる場合は実行を分けてください。
+
+モデルはCLI/YAMLで指定したチェックポイントを優先し、未指定時は接続先の現在モデルを
+使います。取得できたモデルメタデータと名前・パスから判定し、UIプリセットだけでは
+断定しません。不明なら警告して判明した親種別まで適用し、完全に不明なら
+`model_profile`を省略します。固有名のモデルには`--model-type`を指定してください。
+オフライン生成ではAPIへ接続せず、明示指定と手元のモデル名を使用します。
+ログに判定結果・根拠・適用profileを表示します。
+
+### モデル種別
+
+右列の派生版は左列の設定を継承します。`→`は親から子への適用順です。
+
+| 共通キー | 派生キー |
+| --- | --- |
+| `sd15` | SD1.5 |
+| `sdxl` | `illustrius` → `noobai`、`mugen` |
+| `flux` | `flux-dev`, `flux-schnell`, `flux-krea`, `flux-kontext` |
+| `flux2-klein` | `flux2-klein-4b`, `flux2-klein-9b` |
+| `chroma` | `chroma-hd` |
+| `lumina` | `neta-lumina`, `netayume-lumina` |
+| `qwen-image` | `qwen-image-edit` |
+| `z-image` | `z-image-turbo` |
+| `anima` | `anima_2b`, `anima_2.9b`, `anima_3.8b`, `anima-edit` |
+| `ernie-image` | `ernie-image-turbo` |
+| `krea2` | `krea2-turbo`, `krea2-raw`, `krea2-edit` |
+
+Animaの各版には`-edit`付きのキーもあります。例えば
+`anima_2.9b-edit`は`anima → anima_2.9b → anima-edit → anima_2.9b-edit`です。
+同様に`krea2-turbo-edit` / `krea2-raw-edit`は共通・派生版・共通Edit・個別Editの順です。
+版が不明なAnimaは`anima`だけ適用します。
+
+別名: `illustrious` → `illustrius`、`sd1` / `sd1.5` → `sd15`、
+`flux.1` / `flux1` → `flux`、`flux.1-kontext` → `flux-kontext`、
+`flux.2-klein` → `flux2-klein`、`chroma1-hd` → `chroma-hd`、
+`lumina-image-2.0` → `lumina`、`krea-2` → `krea2`、`anima_2.0b` → `anima_2b`。
+同じ種別を別名と重複して定義するとエラーになります。
+既存バックエンド用には`sd2`と`sd35`（別名`sd3` / `sd3.5`）も指定できます。
+
+### 画像入力・追加モジュール
+
+| YAML (`options`配下) | CLI | 用途 |
+| --- | --- | --- |
+| `image` | `--image` | img2imgの初期画像 |
+| `mask` | `--mask` | img2imgのマスク |
+| `reference_images`（配列） | `--reference-image`（繰返し可） | Neoの編集参照画像 |
+| `reference_max_size` | — | 参照画像の最大辺。既定1024、0〜2048の256刻み、0は制限なし |
+
+相対パスは実行時の作業ディレクトリ基準です。画像はクライアントでBase64化します。
+`command.init_images` / `command.mask`にはパスまたは既存のBase64も渡せます。
+初期画像には`--api-type img2img`が必要です。参照画像はt2i/i2i両方で使えます。
+`reference_images`はNeoの`ImageStitch Integrated`に指定順で渡します。
+同じスクリプトの`alwayson_scripts`指定と併用するとエラーです。
+従来の画像ファイル／ディレクトリを位置引数にしたimg2imgも使用できます。
+
+Neo/ForgeのVAE・テキストエンコーダーは`options.sd_vae`の配列またはカンマ区切り文字列、
+あるいは`command.override_settings.forge_additional_modules`で指定します。
+一覧APIで名前を解決し、不明・曖昧な名前はエラーにします。
+`Automatic`・未指定は現在の追加モジュールを維持し、空配列`[]`は明示的に解除します。
+`command.override_settings`なら`override_settings_restore_afterwards: true`で復元できます。
+
+Anima/Klein/Kreaの通常img2imgは編集切替を無効にし、参照画像またはEdit種別の指定時に
+有効にします。明示した`override_settings`は尊重します。
+Anima Edit・Krea 2 Editには対応する専用LoRAが別途必要です。自動取得は行いません。
+必要な設定やImageStitchがサーバーにない場合は送信前にエラーにします。
+モデルごとの品質・対応する操作はNeo側のモデル・モジュール構成にも依存します。
+
+通常生成の例: [examples/neo-txt2img.yaml](examples/neo-txt2img.yaml)
+
+```sh
+python cp2.py examples/neo-txt2img.yaml --api-mode
+python cp2.py examples/neo-txt2img.yaml --api-mode --api-type img2img --image input.png --mask mask.png
+```
+
+編集生成の例: [examples/neo-edit.yaml](examples/neo-edit.yaml)
+
+```sh
+python cp2.py examples/neo-edit.yaml --api-mode --reference-image first.png --reference-image second.png
+```
+
+例のチェックポイント・追加モジュール名はインストール済みの名前に合わせてください。
+runnerの各profileにも`model_type`・`ui_type`・`image`・`mask`・`reference_images`を
+指定できます。img2imgのYAMLはrunner profileの`input`で指定します。
+生成APIの失敗、画像ゼロ、保存失敗は成功として返しません。
+
 
 ## Parser(パーサー)
  sentence in \$\{ \} can be parsed (\$\{= \}の中に式が書けます)

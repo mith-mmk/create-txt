@@ -11,6 +11,7 @@ from modules.callback_function import CallbackFunctions as Callback
 from modules.formula import FormulaCompute
 from modules.logger import getDefaultLogger
 from modules.reader import item_split_txt, read_file_v2
+from modules.generation_profile import apply_generation_profiles
 
 
 def item_split(item):
@@ -777,13 +778,13 @@ def create_text_v2(opt):
     Logger.debug(f"info {info}")
     # console mode is dispose
 
-    options = yml["options"]
+    options = yml.setdefault("options", {})
 
     Logger.debug(f"profile {profile}")
 
     if profile:
         if profile in yml.get("profiles", {}):
-            profile = yml["profiles"][profile]
+            profile = copy.deepcopy(yml["profiles"][profile])
             if "profile" in profile:  # deny nested profile
                 del profile["profile"]
                 Logger.error(f"nested profile is not support in {profile}")
@@ -794,7 +795,7 @@ def create_text_v2(opt):
                 if type(load_profile) is str:
                     load_profile = [load_profile]
                 for profile_name in load_profile:
-                    pre_profile = yml.get("profiles", {}).get(profile_name, {})
+                    pre_profile = copy.deepcopy(yml.get("profiles", {}).get(profile_name, {}))
                     Logger.debug(f"pre_profile {pre_profile}")
                     yml = update_nested_dict(yml, pre_profile)
             yml = update_nested_dict(yml, profile)
@@ -802,11 +803,20 @@ def create_text_v2(opt):
             Logger.error(f"profile {profile} is not found")
             raise NotImplementedError(f"profile {profile} is not found")
 
+    apply_generation_profiles(yml, opt)
+    options = yml.setdefault("options", {})
+
     if isinstance(yml["command"], str):
         Logger.info(f"command loads from {yml['command']}")
         json_file = yml["command"]
         with open(json_file, "r", encoding="utf_8") as f:
             yml["command"] = json.load(f)
+
+    # Explicit CLI command overrides are applied after all profile layers.
+    if override:
+        yml["command"] = update_nested_dict(yml["command"], convert_params(override))
+    if opt.get("json") or opt.get("api_mode") or opt.get("comfy") or opt.get("api_comfy"):
+        options["json"] = True
 
     options["output"] = (
         output if output is not None else options.get("output", "output.txt")

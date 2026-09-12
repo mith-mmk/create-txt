@@ -1,4 +1,5 @@
 import json
+import copy
 import os
 
 import modules.api as api
@@ -6,7 +7,7 @@ import modules.logger as logger
 import modules.share as share
 from modules.interrogate import interrogate
 from modules.parse import create_img2json
-from modules.save import DataSaver
+from modules.save import save_images
 from modules.util import get_forge_additional_module_names, get_part
 
 Logger = logger.getDefaultLogger()
@@ -39,7 +40,6 @@ def img2img(
     progress = base_url + "/sdapi/v1/progress?skip_current_image=true"
     Logger.info("Enter API, connect", url)
     dir = output_dir
-    saver = DataSaver()
     opt["dir"] = output_dir
     Logger.info("output dir", dir)
     os.makedirs(dir, exist_ok=True)
@@ -57,6 +57,11 @@ def img2img(
         userpass = None
 
     res = []
+    from modules.generation_profile import resolve_context
+    from modules.webui import prepare_payloads
+    context = opt.get("generation_context") or resolve_context(
+        {"options": opt}, {"api_mode": True, "api_base": base_url,
+                           "api_userpass": userpass, "api_set_sd_model": opt.get("sd_model")})
     for n, imagefile in enumerate(imagefiles):
         try:
             Logger.debug(f"imagefile is {imagefile}")
@@ -90,9 +95,9 @@ def img2img(
 
             if overrides is not None:
                 if type(overrides) is list:
-                    override = overrides[n]
+                    override = copy.deepcopy(overrides[n])
                 elif type(overrides) is dict:
-                    override = overrides
+                    override = copy.deepcopy(overrides)
                 else:
                     override = {}
                 override_settings = {}
@@ -105,12 +110,12 @@ def img2img(
                         continue
                     override_settings["sd_model_checkpoint"] = model["title"]
                 if "vae" in override:
-                    vae = api.get_vae(base_url=base_url, vae=override["vae"])
-                    del override["vae"]
+                    vae_name = override.pop("vae")
+                    vae = api.get_vae(base_url=base_url, vae=vae_name)
                     if vae is None:
                         # for forge
                         modules = api.get_modules(
-                            base_url=base_url, modules=[override["vae"]]
+                            base_url=base_url, modules=[vae_name]
                         )
                         if modules is None or len(modules) == 0:
                             continue
@@ -120,7 +125,7 @@ def img2img(
                         override_settings["forge_additional_modules"] = models
                     else:
                         # for automatic1111
-                        override_settings["sd_vae"] = vae.title
+                        override_settings["sd_vae"] = vae["model_name"]
                 if "clip_skip" in override:
                     override_settings["CLIP_stop_at_last_layers"] = override[
                         "clip_skip"
@@ -137,7 +142,7 @@ def img2img(
             if item.get("enable_hr"):
                 if "denoising_strength" not in item:
                     item["denoising_strength"] = 0.5
-            item = get_forge_additional_module_names(base_url, item)
+            item = prepare_payloads([item], dict(opt, base_url=base_url), "img2img", context)[0]
             payload = json.dumps(item)
             del item["init_images"]
             Logger.debug(json.dumps(item, indent=2))
@@ -159,12 +164,16 @@ def img2img(
                 continue
 
             r = response.json()
+            if not r.get("images"):
+                res.append({"imagefile": imagefile, "success": False})
+                continue
             opt["filepart"] = get_part(imagefile)
-            prt_cnt = saver.save_images(r, opt=opt)
+            prt_cnt = save_images(r, opt=opt)
+            saved = bool(prt_cnt)
             if share.get("line_count"):
                 prt_cnt += share.get("line_count")
                 share.set("line_count", 0)
-            res.append({"imagefile": imagefile, "success": True})
+            res.append({"imagefile": imagefile, "success": saved})
             flash = f"\033[{prt_cnt}A"
         except KeyboardInterrupt:
             Logger.error("KeyboardInterrupt")

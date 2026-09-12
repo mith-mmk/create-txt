@@ -1,0 +1,38 @@
+version: 2
+options:
+  output: null
+  ui_type: neo
+  model_type: flux2-klein-4b
+  # Pass images using repeated --reference-image flags (in the desired order).
+  reference_max_size: 1024
+methods:
+  - random: 1
+command:
+  prompt: Make the teapot green. Use the shape from image 1 and the lighting from image 2.
+  negative_prompt: ""
+  seed: -1
+  width: 1024
+  height: 1024
+  save_images: false
+  override_settings:
+    # Replace with names available in your Neo server.
+    sd_model_checkpoint: flux-2-klein-4b.safetensors
+    forge_additional_modules:
+      - flux2-vae.safetensors
+      - qwen_3_4b.safetensors
+  override_settings_restore_afterwards: true
+model_profile:
+  flux2-klein:
+    command:
+      steps: 4
+      cfg_scale: 1
+  flux2-klein-4b: null
+  # For Anima Edit, select an Anima checkpoint and matching modules, set
+  # model_type: anima-edit, and add your installed Edit LoRA to the prompt:
+  # <lora:YOUR_ANIMA_EDIT_LORA:1>
+  # Krea 2 Edit likewise requires its own compatible Edit LoRA.
+ui_profile:
+  neo:
+    command:
+      sampler_name: Euler
+      scheduler: Simple

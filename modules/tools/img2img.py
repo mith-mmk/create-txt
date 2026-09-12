@@ -30,6 +30,16 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
     host = context.effective_host()
     dry_run = context.dry_run
 
+    if profile.get("input"):
+        from modules.tools.txt2img import _build_cp2_namespace
+        import cp2
+        args = _build_cp2_namespace(profile, host, context)
+        args.api_type = "img2img"
+        args.api_set_sd_model = profile.get("model")
+        if dry_run:
+            return True
+        return bool(cp2.main(args))
+
     input_dir = profile.get("input_dir") or profile.get("dir", {}).get("input", "")
     if not input_dir:
         Logger.error("[img2img] input_dir が未設定です")
@@ -72,14 +82,14 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
         return True
 
     try:
-        _img2img.img2img(
+        results = _img2img.img2img(
             imagefiles=imagefiles,
             overrides=overrides,
             base_url=host,
             output_dir=output_dir,
             opt=opt,
         )
-        return True
+        return bool(results) and all(item.get("success") for item in results)
     except Exception as e:
         Logger.error(f"[img2img] error: {e}")
         return False

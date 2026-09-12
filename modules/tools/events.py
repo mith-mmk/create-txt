@@ -135,9 +135,24 @@ def detect_server(
 ) -> str:
     """
     接続先のサーバー種別を検出して返す。
-    戻り値: "a1111" | "forge" | "comfyui" | "unknown"
+    戻り値: "a1111" | "forge" | "neo" | "comfyui" | "unknown"
     """
     h = _normalize(host)
+
+    # Identify the requested host before probing a different ComfyUI port.
+    r = _get(h + "/sdapi/v1/options")
+    if r is not None and r.status_code == 200:
+        settings = r.json()
+        if "forge_additional_modules" in settings:
+            kind = "neo" if any(key in settings for key in (
+                "forge_checkpoint_anima", "forge_checkpoint_klein", "anima_do_reference")) else "forge"
+        else:
+            kind = "a1111"
+        Logger.info(f"[events] detected {kind} at {h}")
+        return kind
+    r = _get(h + "/system_stats")
+    if r is not None and r.status_code == 200:
+        return "comfyui"
 
     # --- ComfyUI ---
     comfy_base = (

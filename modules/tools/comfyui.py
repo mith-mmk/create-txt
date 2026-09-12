@@ -222,6 +222,8 @@ def _build_cp2_namespace(
         # モデル（モデル切り替えは呼び出し元で設定済みのため None）
         api_set_sd_model=profile.get("model"),
         api_set_sd_vae=profile.get("vae", "Automatic"),
+        model_type=profile.get("model_type") or opt_map.get("model_type"),
+        ui_type=profile.get("ui_type") or opt_map.get("ui_type", "comfy"),
         # ControlNet
         cn_images_dir=profile.get("cn_images_dir"),
         cn_save_pre=profile.get("cn_save_pre", False),

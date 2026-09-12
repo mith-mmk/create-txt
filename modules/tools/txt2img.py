@@ -36,6 +36,7 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
 
     # --- モデル選択 ---
     model_source = profile.get("models") or profile.get("models_file")
+    model = profile.get("model")
     if model_source and profile.get("random_model", True):
         abort_matrix = context.config.get("abort_matrix") or profile.get("abort_matrix")
         genre = profile.get("genre") or context.get_var("genre")
@@ -44,9 +45,6 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
         )
         if model:
             Logger.info(f"[txt2img] set model: {model}")
-            if not dry_run:
-                vae = profile.get("vae", "Automatic")
-                api.set_sd_model(model, base_url=host, sd_vae=vae)
 
     # --- cp2.main() を呼び出す ---
     try:
@@ -56,6 +54,7 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
         return False
 
     opt = _build_cp2_namespace(profile, host, context)
+    opt.api_set_sd_model = model
     Logger.info(f"[txt2img] running cp2.main(input={opt.input}, profile={opt.profile})")
 
     if dry_run:
@@ -63,8 +62,7 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
         return True
 
     try:
-        cp2.main(opt)
-        return True
+        return bool(cp2.main(opt))
     except Exception as e:
         Logger.error(f"[txt2img] cp2.main() error: {e}")
         return False
@@ -86,15 +84,22 @@ def _build_cp2_namespace(
 
     return argparse.Namespace(
         input=profile.get("input"),
-        api_mode=True,
+        api_mode=(context.server_type != "comfyui"),
         api_base=host,
         api_output_dir=profile.get("output", "./outputs"),
         api_input_json=profile.get("input_json"),
         api_filename_pattern=opt_map.get("filename_pattern")
         or profile.get("filename_pattern"),
         max_number=profile.get("number", -1),
-        api_set_sd_model=None,  # モデルは run() 側で事前設定済み
+        api_set_sd_model=None,  # run() supplies the selected model before profile resolution.
         api_set_sd_vae=profile.get("vae", "Automatic"),
+        model_type=profile.get("model_type") or opt_map.get("model_type"),
+        ui_type=profile.get("ui_type") or opt_map.get("ui_type"),
+        image=profile.get("image") or opt_map.get("image"),
+        mask=profile.get("mask") or opt_map.get("mask"),
+        reference_images=profile.get("reference_images") or opt_map.get("reference_images"),
+        reference_max_size=profile.get("reference_max_size", opt_map.get("reference_max_size")),
+        api_type=profile.get("api_type", "txt2img"),
         override=profile.get("override"),
         profile=profile.get("profile"),
         values=profile.get("values"),
