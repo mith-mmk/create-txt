@@ -682,6 +682,24 @@ Example(例)
 ```
 
 ### Parse tester (パーサーテスター)
+
+実行できるYAMLサンプルは[examples/formula.yaml](examples/formula.yaml)です。
+リポジトリのルートで次を実行すると、式を展開したJSONを保存します。画像生成APIは使用しません。
+
+```sh
+python cp2.py examples/formula.yaml --output outputs/formula.json
+```
+
+期待する出力は[examples/formula.expected.json](examples/formula.expected.json)です。
+四則演算の優先順位、変数、`>=`・`<=`、負数の関数引数、文字列の繰り返し、`split`を確認できます。
+YAMLの文字列変数を数値として計算するときは、サンプルの`int(size)`のように変換してください。
+
+回帰テストと、サンプルのCLI実行・JSON保存のテスト:
+
+```sh
+python -m pytest tests/test_formula_regressions.py tests/test_formula_sample.py tests/parser_test.py tests/prompt_v2_test.py -q
+```
+
 ```
 > python tools.py parser_test '2 + x * y' 'x=3,y=4'
 ...

@@ -1,0 +1,23 @@
+# Offline formula example: run from the repository root.
+# python cp2.py examples/formula.yaml --output outputs/formula.json
+version: 2
+options:
+  json: true
+methods:
+  - random: 1
+variables:
+  label:
+    - teapot
+  size:
+    - "8"
+command:
+  prompt: >-
+    ${=label + "!"} ${="ha" * 3},
+    ${=if(2 >= 1 && 2 <= 3, "daylight", "night")},
+    parts=${=len(split("red,green,blue", ","))}
+  negative_prompt: blurry
+  width: ${=int(size) * 64}
+  height: ${=int(size) * 64}
+  steps: ${=10 - 2 * 3 - 1}
+  cfg_scale: ${=max(-1, -2) + 5}
+  seed: 42

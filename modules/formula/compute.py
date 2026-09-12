@@ -286,6 +286,8 @@ class FormulaCompute:
                     ope = parsed_tokens[j - 1]["value"]
                     if parsed_tokens[j - 2]["type"] == TOKENTYPE.OPERATOR:
                         head = True
+                    elif parsed_tokens[j - 2]["type"] == TOKENTYPE.COMMA:
+                        head = True
                     elif (
                         parsed_tokens[j - 2]["type"] == TOKENTYPE.ARRAYBRACKET
                         and parsed_tokens[j - 2]["value"] == "["
@@ -410,49 +412,22 @@ class FormulaCompute:
                         reversed_polish.append(stack.pop())
 
             elif token["type"] == TOKENTYPE.OPERATOR:
-                if len(stack) > 0 and stack[-1]["type"] == TOKENTYPE.BRACKET:
-                    while len(stack) > 0:
-                        if stack[-1]["type"] == TOKENTYPE.BRACKET:
-                            break
-                        reversed_polish.append(stack.pop())
-                    stack.append(token)
-                else:
-                    if (
-                        len(stack) > 0
-                        and (
-                            stack[-1]["type"] == TOKENTYPE.FUNCTION
-                            or stack[-1]["type"] == TOKENTYPE.ARRAYOBJECT
-                        )
-                        and token["value"]
-                        in [
-                            "+",
-                            "-",
-                            "*",
-                            "/",
-                            "%",
-                            "**",
-                            ">",
-                            "<",
-                            ">=",
-                            "<=",
-                            "==",
-                            "!=",
-                            "&&",
-                            "||",
-                        ]
+                # Emit pending operands before their operator, then drain all
+                # preceding operators with equal or higher precedence.
+                while stack:
+                    if stack[-1]["type"] in (
+                        TOKENTYPE.FUNCTION, TOKENTYPE.ARRAYOBJECT, TOKENTYPE.VARIABLE
                     ):
                         reversed_polish.append(stack.pop())
-                        stack.append(token)
-                    elif len(stack) > 0 and stack[-1]["type"] == TOKENTYPE.OPERATOR:
-                        order = operator_order[token["value"]]
-                        preoder = operator_order[stack[-1]["value"]]
-                        if order < preoder:
-                            stack.append(token)
-                        else:
-                            reversed_polish.append(stack.pop())
-                            stack.append(token)
+                    elif (
+                        stack[-1]["type"] == TOKENTYPE.OPERATOR
+                        and operator_order[stack[-1]["value"]]
+                        <= operator_order[token["value"]]
+                    ):
+                        reversed_polish.append(stack.pop())
                     else:
-                        stack.append(token)
+                        break
+                stack.append(token)
             elif token["type"] == TOKENTYPE.SPACE:
                 pass
             elif token["type"] == TOKENTYPE.OTHER:
@@ -624,7 +599,7 @@ class FormulaCompute:
         typeVariable5 = re.compile(r"^[a-zA-Z_$][a-zA-Z0-9_]*\[\'.*?\'\]")
         # abc.abc V2 only
         typeVariable6 = re.compile(r"^[a-zA-Z_$][a-zA-Z0-9_]*\.[a-zA-Z_$][a-zA-Z0-9_]*")
-        typeOperator = re.compile(r"^(\+|\-|\*{1,2}|\/|\%|\^|>|<|>=|<=|==|!=|&&|\|\|)")
+        typeOperator = re.compile(r"^(\+|\-|\*{1,2}|\/|\%|\^|>=|<=|>|<|==|!=|&&|\|\|)")
         typeBracket = re.compile(r"^(\(|\))")
         typeArrayBracket = re.compile(r"^\[|\]")
         typeFunction = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*\s*\(")
@@ -826,7 +801,7 @@ class FormulaCompute:
             formula, variables, attributes={}, debug=debug, version=version
         )
         if compute.compute():
-            return compute.getCompute()
+            return compute.result
         else:
             return None
 
@@ -835,9 +810,9 @@ class FormulaCompute:
         from .compute import FormulaCompute
 
         compute = FormulaCompute(
-            formula, variables, attributes={}, debug=True, version=version
+            formula, variables, attributes=attributes, debug=True, version=version
         )
         if compute.compute():
-            return compute.getCompute(), None
+            return compute.result, None
         else:
             return None, compute.getError()

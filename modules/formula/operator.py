@@ -57,7 +57,8 @@ def operation(compute, token, stack):
                     TOKENTYPE.ERROR,
                 )
                 return False
-            stack.append({"type": TOKENTYPE.NUMBER, "value": left * right})
+            else:
+                stack.append({"type": TOKENTYPE.NUMBER, "value": left * right})
         elif token["value"] == "/":
             if type(left) is str or type(right) is str:
                 compute.setTokenError(

@@ -173,7 +173,7 @@ def callFunction(compute, function, stack, args=None):
             values = getValues(2, stack, args=args)
             separator = values[0]["value"]
             string = values[1]["value"]
-            string = str(string["value"])
+            string = str(string)
             return True, {"type": TOKENTYPE.STRING, "value": string.split(separator)}
         case "upper":  # upper(string)
             string = getValues(1, stack, args=args)[0]

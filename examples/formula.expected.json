@@ -1,0 +1,11 @@
+[
+  {
+    "prompt": "teapot! hahaha, daylight, parts=3",
+    "negative_prompt": "blurry",
+    "width": 512,
+    "height": 512,
+    "steps": 3,
+    "cfg_scale": 4,
+    "seed": 42
+  }
+]

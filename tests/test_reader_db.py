@@ -1,7 +1,6 @@
 import sqlite3
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from uuid import uuid4
 
 from modules.reader import read_file_v2
 
@@ -14,13 +13,8 @@ _JSONL2DB_SPEC.loader.exec_module(_JSONL2DB_MODULE)
 import_jsonl_to_db = _JSONL2DB_MODULE.import_jsonl_to_db
 
 
-def make_test_dir(name):
-    return Path(__file__).resolve().parents[1]
-
-
-def test_read_file_v2_reads_sqlite_rows_with_schema():
-    test_dir = make_test_dir("test_reader_db_schema")
-    db_file = test_dir / f"test_reader_db_schema-{uuid4().hex}.sqlite3"
+def test_read_file_v2_reads_sqlite_rows_with_schema(tmp_path):
+    db_file = tmp_path / "schema.sqlite3"
     conn = sqlite3.connect(db_file)
     try:
         conn.execute(
@@ -77,9 +71,8 @@ def test_read_file_v2_reads_sqlite_rows_with_schema():
     assert records[0]["query"] == "animal"
 
 
-def test_jsonl2db_import_creates_readable_rows():
-    test_dir = make_test_dir("test_jsonl2db_import")
-    jsonl_file = test_dir / f"test_jsonl2db_import-{uuid4().hex}.jsonl"
+def test_jsonl2db_import_creates_readable_rows(tmp_path):
+    jsonl_file = tmp_path / "sample.jsonl"
     jsonl_file.write_text(
         "\n".join(
             [
@@ -89,7 +82,7 @@ def test_jsonl2db_import_creates_readable_rows():
         ),
         encoding="utf-8",
     )
-    db_file = test_dir / f"test_jsonl2db_import-{uuid4().hex}.sqlite3"
+    db_file = tmp_path / "import.sqlite3"
 
     count = import_jsonl_to_db(str(jsonl_file), str(db_file), "date_items")
 
@@ -117,11 +110,10 @@ def test_jsonl2db_import_creates_readable_rows():
     assert "animal" in columns
 
 
-def test_jsonl2db_import_recursively_loads_directory():
-    test_dir = make_test_dir("test_jsonl2db_recursive")
-    root_dir = test_dir / "tests" / "data" / "jsonl_recursive"
+def test_jsonl2db_import_recursively_loads_directory(tmp_path):
+    root_dir = Path(__file__).resolve().parent / "data" / "jsonl_recursive"
 
-    db_file = test_dir / f"test_jsonl2db_recursive-{uuid4().hex}.sqlite3"
+    db_file = tmp_path / "recursive.sqlite3"
     count = import_jsonl_to_db(str(root_dir), str(db_file), "jsonl_items")
 
     assert count == 2
