@@ -1,53 +1,53 @@
 # Create prompt V2
 
-Create prompt V2 は stable-diffusion-webui とComfyUI のためのプロンプト作成ツールです。現バージョンは SD WebUI Forge NeoとComfyUIがターゲット担っています。
-
 Create prompt V2 is a prompt creator for stable-diffusion-webui and ComfyUI.
-Current version is target for SD WebUI Forge Neo and ComfyUI.
+The current release targets SD WebUI Forge Neo and ComfyUI.
 
-## new(新機能)
+[Japanese README](README.ja.md)
 
-- AnimaのComfyUI対応
-- model_profile Settings for a model type (モデルタイプによる指定)
-- ui_profile Settings for an UI type (UIタイプによる指定)
-- checkpoint_profile Settings for a check point file (ファイル名による個別指定)
+## New features
 
-## objective(目的)
+- Anima support for ComfyUI
+- model_profile: settings selected by model family
+- ui_profile: settings selected by UI type
+- checkpoint_profile: settings selected by checkpoint name
 
-The Prompt Creator V2 is a prompt creator for AUTOMATIC1111/stable-diffusion-webui(Profileから、Stable Diffusion用のプロンプトを自動作成します)
-You can also automatically generate images by using the API.(またAPIを叩くことにより画像の自動生成を可能にします)
-ComfyUI API is also supported([ComfyUI APIもサポートしています](#comfyui))
+## Objective
 
-- A config file is required(設定ファイルが必要です)
-- A config file is written in yaml(設定ファイルはyaml形式で記述します)
-- A config file is create prompt list file(設定ファイルはプロンプトリストファイルを作成します)
-- A config file has methods, number of prompt, prompt command, prompt settings(設定ファイルには、メソッド、プロンプトの数、プロンプトコマンド、プロンプト設定が記述されます)
-- A config file has variables, array, command, profiles, but can write in json or text(設定ファイルには、変数、配列、コマンド、プロファイルが記述されますが、jsonまたはテキストで記述できます)
-- See examples for details(詳細はexamplesを参照してください)
+Prompt Creator V2 builds prompt lists for AUTOMATIC1111/stable-diffusion-webui.
+You can also automatically generate images by using the API.
+The ComfyUI API is also supported; see [ComfyUI](#comfyui).
+
+- A configuration file is required.
+- Configuration files use YAML.
+- A configuration file defines the prompt list to create.
+- It can define methods, the number of prompts, prompt commands and generation settings.
+- It can also define variables, arrays, commands and profiles, and can load JSON or text data.
+- See the examples for details.
 
 input.yaml
 
 ```yaml
-version: 2.0 # must(必須)
+version: 2.0 # must
 options:
-  output: ./outputs/v2/girls.json # output file(出力ファイル)
-  json: true # output json(jsonで出力)
-  number: 50 # number of prompt(プロンプトの数)
+  output: ./outputs/v2/girls.json # output file
+  json: true # output json
+  number: 50 # number of prompt
 methods: # random: 1  or multiple: array
-  - random: 0 # random 0 is use options.number(0はoptions.numberを使用) randam is generate random prompt(randomはランダムプロンプトを生成します)
-  - cleanup: prompt negative_prompt # clean up prompt (promptをクリーンアップします)
+  - random: 0 # random 0 is use options.number randam is generate random prompt
+  - cleanup: prompt negative_prompt # clean up prompt
 
-variables: # variables(変数)
-  negative: ['nsfw, easynegative'] # If you define variables in the config, define them as an array(config内に変数を定義する場合は配列で定義します)
-  actions: $json/actions.jsonl # actions(アクション)
-  outfits: $jsonl/outfits.json # outfits(服)
-  place: $jsonl/places.jsonl[places] # place(場所)
+variables: # variables
+  negative: ['nsfw, easynegative'] # If you define variables in the config, define them as an array
+  actions: $json/actions.jsonl # actions
+  outfits: $jsonl/outfits.json # outfits
+  place: $jsonl/places.jsonl[places] # place
 
-  eyes: $jsonl/eyes.jsonl[eyes] # ${eyes} 目
-  hair: $jsonl/hairs.jsonl[hair] # ${hair} 髪
+  eyes: $jsonl/eyes.jsonl[eyes] # ${eyes}
+  hair: $jsonl/hairs.jsonl[hair] # ${hair}
 
-command: # prompt command(プロンプトコマンド) The content that will be output to the file(ファイルに出力される内容になります)
-  prompt: '${eyes} ${hair} girl wearing ${outfits} is ${actions} ${place} ' # prompt command(プロンプトコマンド)
+command: # prompt command The content that will be output to the file
+  prompt: '${eyes} ${hair} girl wearing ${outfits} is ${actions} ${place} ' # prompt command
   negative_prompt: '${negative}'
   seed: -1
   width: 512
@@ -63,25 +63,25 @@ command: # prompt command(プロンプトコマンド) The content that will be 
   hr_upscaler: R-ESRGAN 4x+ Anime6B
   denoising_strength: 0.5
   hr_second_pass_steps: 10
-  override_settings: # override settings(設定を上書き)
-    CLIP_stop_at_last_layers: 2 # CLIP stop at last layers(CLIPを停止する階層を指定、2を推奨するケースが多い)
+  override_settings: # override settings
+    CLIP_stop_at_last_layers: 2 # CLIP stop at last layers
 ```
 
 jsonl(eyes.jsonl)
 
 ```jsonl
 /*
-  If you want write comment in jsonl, you can it.(jsonl内でコメントを書く場合は、このようにします)
+  If you want write comment in jsonl, you can it.
 */
-// You can write like this(これでも可能です)
-{"W": 0.1, "C": ["eyes"], "V": "blue eyes"} // W C V is upper case(W C Vは大文字)
+// You can write like this
+{"W": 0.1, "C": ["eyes"], "V": "blue eyes"} // W C V is upper case
 {"W": 0.1, "C": ["eyes"], "V": "green eyes"}
 {"W": 0.1, "C": ["eyes"], "V": "black eyes"}
 {"W": 0.1, "C": ["eyes"], "V": "brown eyes"}
-{"W": 0.1, "C": ["eyes"], "V": ["red eyes"]}  // "V" is string or string array("V"は文字列または文字列配列)
+{"W": 0.1, "C": ["eyes"], "V": ["red eyes"]}  // "V" is string or string array
 ```
 
-You can write text file(semiclon separated), but cannot write category (テキスト(セミコロン区切り)でも書けますが、カテゴリーは書けません)
+You can write a semicolon-separated text file; categories are not supported in text mode.
 
 eyes.txt
 
@@ -93,24 +93,24 @@ eyes.txt
 0.1;red eyes
 ```
 
-## How to run(実行方法)
+## How to run
 
 ```
 python cp2.py input.yaml
 ```
 
-You can call API and generate images automatically by adding options(オプションを追加することで、APIを呼び出し画像を自動生成することができます)
-You need to add --api and --listen options to WebUI(ただし、WebUIに--apiと--listenオプションを追加する必要があります)
+Add the API options to generate images automatically.
+Start WebUI with `--api` and `--listen`.
 
-If you use "Prompts from file or textbox" in WebUI, output in text format. If you call API, output in JSON format(WebUIの"Prompts from file or textbox"を使う場合はtext形式で出力します。APIを叩く場合はJSON形式で出力します)
+Use text output with WebUI's "Prompts from file or textbox" and JSON output when calling the API.
 
-Outputs of examples(以下は、exampleの実行結果です)
+Example command
 
 ```
 python .\cp2.py .\examples\prompts-girls.yaml
 ```
 
-Outputs
+Example output
 
 ```txt
 --prompt (petite kawaii girl) wearing (yellow camisor), normal yellow eyes, annoyed, brown curly twin-tail hair between eyes shiny long hair, (medium breasts) 2girls are serving dish, diorama style (hiten_1, Production I.G), on the fantasy field in the day, steam, (blur), (flock of birds), from side --negative_prompt nsfw, easynegative, ${doing, 2}, pixel_art, halftone, multiple views, monochrome, futanari, futa, yaoi, speech bubble, (low quality, worst quality:1.4), text, blurry, bad autonomy --seed -1 --width 512 --height 704 --steps 30 --cfg_scale 12.5 --sampler_name DPM++ SDE --batch_size 1 --n_iter 1
@@ -125,45 +125,40 @@ Outputs
 --prompt (teenage girl) wearing (white blazer and uniform), normal silver eyes, doyagao, orange straight twin-tail dyed bangs very long hair, (medium breasts) 1girl is standing up, super-deformed (RossDraws, yuzusoft), in Taipei blue sky, wet, dynamic angle, medium shot --negative_prompt nsfw, easynegative, ${doing, 2}, pixel_art, halftone, multiple views, monochrome, futanari, futa, yaoi, speech bubble, (low quality, worst quality:1.4), text, blurry, bad autonomy --seed -1 --width 512 --height 704 --steps 30 --cfg_scale 12.5 --sampler_name DPM++ SDE --batch_size 1 --n_iter 1
 ```
 
-Outputs of text style use copy and paste on Web UI(text形式の出力はWeb UIに貼り付けて使います)
+Text output can be copied and pasted into WebUI.
 
-APIを叩く場合はJSON形式で出力します
+Use JSON output when calling the API.
 
 ```
 python cp2.py input.yaml --json
 ```
 
-You can write in config file, too(設定ファイルに直接記述することもできます)
+You can also set this in the configuration file.
 
 ```yaml
 options:
   json: true
 ```
 
-You can direct run Web UI API(直接実行可能です)
+You can run the WebUI API directly.
 
 ```
 python cp2.py input.yaml --api-mode --api-base http://localhost:7860 --api-output-dir ./outputs/text-images --api-filename-pattern [num]-[seed]
 ```
 
-If you run from JSON file, use --input-json option(JSONファイルを実行する場合は、--input-jsonを使います)
+Use `--input-json` to run from a JSON file.
 
 ```
 python cp2.py --api-input-json "./outputs/examples.json" --api-output-dir ./outputs/text-images --api-filename-pattern [DATE]-[num]-[seed]
 ```
 
-# enviroment(環境)
+# Environment
 
-- AUTOMATIC1111/stable-diffusion-web-ui (最新のバージョン) のAPIを有効にする
-  - --APIオプションを追加する
-  - リモートから実行する場合は、リモートアクセスを有効にする
-  - settingを変更できるようにする(overrideを使う場合) -　python 3.10以降
+- Python 3.10 or later.
+- For WebUI, Forge or Forge Neo, start the server with `--api`. Enable remote access when the server is on another host.
+- For ComfyUI, use its API endpoint and the `--comfy` option.
 
-- automatic1111/stable-diffusion-web-ui (newest commit) enable remote access
-  - add webui --API option
-- python 3.10 and later
-
-# Usage(使い方)
+# Usage
 
 ```
 usage: cp2.py [-h] [--append-dir APPEND_DIR] [--output OUTPUT] [--json [JSON]] [--escape-filename [ESCAPE_FILENAME]]
@@ -190,185 +185,182 @@ usage: cp2.py [-h] [--append-dir APPEND_DIR] [--output OUTPUT] [--json [JSON]] [
               [input]
 ```
 
-The parser is still changing. For the exact current list, `python cp2.py --help` is canonical.
-(引数はまだ増減しているため、正確な最新一覧は `python cp2.py --help` を参照してください)
+The parser is still evolving. For the exact current option list, run `python cp2.py --help`.
 
--h, --help show this help message and exit(ヘルプ表示)
+-h, --help show this help message and exit
 
 --append-dir APPEND_DIR
-direcory of input append prompt files(追加プロンプトファイルのディレクトリ)
+Directory containing prompt files to append.
 
---output OUTPUT direcory of output file of prompt list file(プロンプトリストファイルの出力ディレクトリ)
+--output OUTPUT: output directory for the prompt list.
 
---json output JSON(JSONで出力する,デフォルトはtextでWeb UIのprompt matrixに貼り付け用 )
+--json: output JSON (the default is text for the WebUI prompt matrix).
 
---v1json output V1 JSON(旧バージョンのJSONで出力する)
+--v1json: output the legacy V1 JSON format.
 
---profile PROFILE switch profile in config file(設定ファイルのプロファイルを切り替える)
+--profile PROFILE: select a profile in the configuration file.
 
---debug debug mode(デバッグモード)
+--debug: enable debug mode.
 
---json-verbose output verbose in JSON(replace --api-filname-variable)(JSONで詳細を出力する)
+--json-verbose: include verbose values in JSON.
 
---api-mode output api force set --json(APIを呼び出し、自動実行する)
-see https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/API
+--api-mode: call the API and force JSON output.
+See the API documentation at https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/API.
 
---api-base API_BASE for call api from this script e.g. http://127.0.0.1:7860 (APIを呼び出すためのベースURL)
+--api-base API_BASE: base URL used by this script, for example http://127.0.0.1:7860.
 
 --api-output-dir API_OUTPUT_DIR
-api output images directory(APIの出力画像ディレクトリ)
+Directory for images returned by the API.
 
 --api-input-json API_INPUT_JSON
-api direct inputs from a json file(APIの直接入力用のjsonファイル)
+Read direct API inputs from a JSON file.
 
 --api-filename-pattern API_FILENAME_PATTERN
-api outputs filename pattern default: [num]-[seed] (APIの出力ファイル名パターン 既定値: [num]-[seed])
+API output filename pattern (default: [num]-[seed]).
 
 --max-number MAX_NUMBER
-override option.number for yaml mode(出力数。コンフィグの設定を上書きする)
+Override option.number in YAML mode.
 
 --api-filename-variable
-replace variables use filename(ファイル名に変数を使う)
+Use variables in the output filename.
 
 --api-set-sd-model SD_MODEL
-Change sd model "Filename.ckpt [hash]" e.g. "wd-v1-3.ckpt [84692140]" or 84692140 (SDモデルを変更する 例: "wd-v1-3" または 84692140)
+Change the SD model by filename and hash, for example "wd-v1-3.ckpt [84692140]" or 84692140.
 
 --api-set-sd-vae VAE_FILE
-set vaefile(include extention). `Automatic` is valid for WebUI, but ComfyUI converts it to no explicit VAE override.
-(VAEファイルを設定する。拡張子は省略できません。`Automatic` はWebUIでは有効ですが、ComfyUIではVAE未指定として扱います)
+Set the VAE filename, including its extension. `Automatic` is valid for WebUI; ComfyUI treats it as no explicit VAE override.
 
 --text-encoder TEXT_ENCODER
-set Forge/Neo text encoder module; `Automatic` keeps the server default
-(Forge/Neoのテキストエンコーダーを設定する。`Automatic` はサーバー既定値を維持します)
+Set the Forge/Neo text encoder module. `Automatic` keeps the server default.
 
 --override
-command oveeride ex= "width=768, height=1024"(コマンドを上書きする 例: "width=768, height=1024")
+Override command values, for example "width=768, height=1024".
 
 --values (-v)
- override values in yaml(yamlの値をオーバーライドする)
+Override values in YAML.
 ex: "-v prefix=a,face=smile"
 filename: "${prefix}-001.json" -> filename: "a-001.json"
 face: ["\${face} face"] -> face: ["smile face"]
 
 --info
-add infomation ex="date=2022/08/19, comment=random"(情報を追加する 例: "date=2022/08/19, comment=random")
+Add metadata, for example "date=2022/08/19, comment=random".
 
 --save-extend-meta
-save extend meta data using for create_prompt(拡張メタデータを保存する create_promptで使用する)
+Save extended metadata for create_prompt.
 
 --image-type
-image type jpg or png/ default png(画像タイプ jpg または png デフォルトはpng)
+Image type: jpg or png (default: png).
 
 --image-quality
-default 80, image quality for jpg(デフォルト80、jpgの画質)
+JPEG quality (default: 80).
 
 --debug
-debug mode(デバッグモード)
+Debug mode.
 --verbose
-verbose(詳細モード)
+Verbose output.
 --prompt
-output prompt only(プロンプトのみ出力する)
+Output prompts only.
 --json-escape
-multibyte escaped json(マルチバイトをエスケープしたjsonを出力する)
+Escape multibyte characters in JSON.
 
 --api-comfy
-use comfyui api alternative to webui(Automatic1111ではなくComfyUIのAPIを使う。portが変わるため明示的なhostnameの指定が必要)
---api-comfy-save save image directory for comfyui api(ComfyUIのAPI画像を保存先)
-ui = ComfyUI server, save = save to local, both = both(ComfyUIサーバーの保存先に保存、ローカルに保存、両方)
-Meta data is converted to Automatic1111 compatible only when save is specified(メタデータはsaveを指定したときのみAutomatic1111互換に変換しようと試みます)
+Use the ComfyUI API instead of the WebUI API.
+--api-comfy-save: image destination for the ComfyUI API.
+ui saves on the ComfyUI server, save saves locally, and both does both.
+Metadata is converted to the Automatic1111 format only when save is selected.
 
-## Compatibility(互換性)
+## Compatibility
 
-    - V2 is not compatible with V1(旧バージョンとの互換性はありません)
+    - V2 is not compatible with V1
 
-# Installation(インストール)
+# Installation
 
-    - python 3.10 and later is required(3.10以降が必要です)
+    - python 3.10 and later is required
 
-install required packages(必要なパッケージをインストール)
+install required packages
 
 ```
 pip install -r requirements.txt
 ```
 
-# yaml mode
+# YAML mode
 
-text mode is obsolete(textモードは廃止になりました) -　yaml mode is create prompt list file from yaml file(yamlモードはyamlファイルからプロンプトリストファイルを作成します)
+Text mode is obsolete; YAML mode creates a prompt list from a YAML file.
 
-## difference from V1(V1との違い)
+## Differences from V1
 
-- only variable mode(変数モードのみ)
-- appends is obsolete(appendsは廃止になりました)
-  - change variables and array (variablesとarrayに変更)
-- multipe, aftermultipe is obsolete(multipe, aftermultipeは廃止になりました)
-  - change methods (methodsに変更)
-- enable associative array(連想配列をサポートしました)
-- enable jsonl read for list file(jsonlの読み込みが可能になりました)
-- category query for jsonl(カテゴリークエリーが可能になりました)
-- variables nest is max 10, ignore define order(変数のネストは最大10, 定義の順番は関係ありません)
+- Variable mode only.
+- appends is obsolete; use variables and array.
+  - Use variables and array instead.
+- multipe and aftermultipe are obsolete.
+  - Use methods instead.
+- Associative arrays are supported.
+- JSONL can be loaded as a list file.
+- JSONL category queries are supported.
+- Variables can be nested up to 10 levels; definition order does not matter.
 
-## method(メソッド)
+## Methods
 
-- random is generate random prompt(randomはランダムプロンプトを生成します)
-- multiple is generate multiple prompt(multipleは配列から複数のプロントを作成します)
-- cleanup is clean up prompt(cleanupはプロンプトをクリーンアップします)
-- default is random 0(defaultはランダム0です)
+- random generates random prompts.
+- multiple generates prompts from arrays.
+- cleanup cleans prompt fields.
+- default is random: 0.
 
 ```yaml
-version: 2 # must(必須)
+version: 2 # must
 import:
-  - ./add_profile.yaml # import add yaml files (yamlインポート 基本profileを分割するのに使う)
+  - ./add_profile.yaml # import add yaml files
 options:
   output: ./outputs/v2.json
   json: true
-  number: 10 # number of prompt(プロンプトの数) multipleの場合は配列数がかけ算される
+  number: 10 # number of prompt multiple
 
 methods: # random: 1  or multiple: array
-  - preset: model # presets(プリセット) only choice once(最初に一度だけ選択)
-  - exclude: date # exclude choice in "random", run random exclude variables will be clear("random"で除外する変数)
-  - random: 0 # random 0 is use options.number(0はoptions.numberを使用)
-  - multiple: char place # array char と place から複数のプロンプトを生成
-  - choice: actions # values choice before run "random" method(randomの実行前に値を選択)
-  - random: 0 # random use after multiple must set 0(mutipleの後にrandomを使う場合は0を設定する)
-  - creanup: prompt # clean up prompt (promptをクリーンアップ)
-variables: # 変数
+  - preset: model # presets only choice once
+  - exclude: date # exclude choice in "random", run random exclude variables will be clear
+  - random: 0 # random 0 is use options.number
+  - multiple: char place # array char  place
+  - choice: actions # values choice before run "random" method
+  - random: 0 # random use after multiple must set 0
+  - creanup: prompt # clean up prompt
+variables: #
   model:
     - xd.safetesors
     - sd15.safetesors
   actions:
     - standing
     - sitting
-  date: jsonl/date.jsonl[animal] # jsonl file and category query(カテゴリークエリー)
+  date: jsonl/date.jsonl[animal] # jsonl file and category query
 
-array: # マルチプル用配列
+array: #
   char: [cat, dog, bird, fish] # make prompt matrix of cat, dog, bird, and fish
   place: [room, garden, park, street] # make prompt matrix of room, garden, park, and street
 command: # command  workflow.json <- driect worlkflow.json setting for Comfy UI
-  prompt: '${char} is ${actions} in ${place}, ${date}' # prompt command(プロンプトコマンド)
+  prompt: '${char} is ${actions} in ${place}, ${date}' # prompt command
   negative_prompt: 'negative prompt'
-  seed: -1 # -1 is random seed(-1はランダムシード)
-  width: 640 # width of image(画像の幅)
-  height: 448 # height of image(画像の高さ)
-  cfg_scale: 7.5 # scale of image(画像のスケール)
-  # それ以外はapiのマニュアルを参考にしてください
+  seed: -1 # -1 is random seed
+  width: 640 # width of image
+  height: 448 # height of image
+  cfg_scale: 7.5 # scale of image
+  # api
 ```
 
-This case is generate 10 _ 4 _ 4 = 160 prompts, beacuse multiple mode uses char number is and place number 4. (この場合、160のプロンプトが生成されます。multipleモードでcharが4つ、placeが4つ指定されているため10 _ 4 _ 4 = 160になります。)
+This example generates 10 × 4 × 4 = 160 prompts because multiple uses four values from both char and place.
 
-## array variables(配列変数)
+## Array variables
 
 ```yaml
 char:
   - 0.1;cat;dog;bird;fish
-cat: ${char[1]} # array is start 1, zero is not support(配列は1から始まります)
+cat: ${char[1]} # array is start 1, zero is not support
 dog: ${char[2]}
 bird: ${char[3]}
 fish: ${char[4]}
 ```
 
-array variables can set weight at first of array. In this case, char has array of cat, dog, bird, fish with weight 0.1. cat, dog, bird, fish are replaced to 1st to 4th of char array. (配列変数は、配列の最初に重みを指定することができます。この場合、charは0.1の重みでcat、dog、bird、fishの配列を持ちます。cat、dog、bird、fishはcharの配列の1から4番目に置き換えられます。)
+An array variable can begin with a weight. Here char contains cat, dog, bird and fish with weight 0.1; they replace positions 1 through 4.
 
-## nested variables(ネスト変数)
+## Nested variables
 
 ```yaml
 char:
@@ -378,11 +370,11 @@ char:
 human: [girl, boy]
 ```
 
-This case is replace char to \$\{animal\} and \$\{human\} (この場合、\$\{char\}が\$\{animal\}と\$\{human\}に置き換えられます)
+In this example, char is replaced by \$\{animal\} and \$\{human\}.
 
-## attribute, associative array(アトリビュート,連想配列)
+## Attributes and associative arrays
 
-reserved words are "W", "C", "V", "weight", "choice", "variable", "query", these are not accesible. (以上は予約語で、アクセス出来ません)
+The reserved words "W", "C", "V", "weight", "choice", "variable" and "query" cannot be accessed directly.
 
 ```yaml
 char:
@@ -415,9 +407,9 @@ being: jsonl/being.jsonl[animal]
 size: ${being["size"]}
 ```
 
-issue #1 nseted associative array is not supported(入れ子の連想配列はサポートされていません)
+Issue #1: nested associative arrays are not supported.
 
-## ファイルの読み込み
+## Loading input files
 
 ### text
 
@@ -425,14 +417,14 @@ issue #1 nseted associative array is not supported(入れ子の連想配列は�
 date: text/date.txt
 ```
 
-This case is read text file date.txt. (この場合、date.txtファイルを読み込みます)
+This reads the text file date.txt.
 
 ```text
 0.1;day
 0.1;night
 ```
 
-text is not support query and associative array(textではクエリーと連想配列はサポートされていません)
+Text mode does not support queries or associative arrays.
 
 ### jsonl
 
@@ -440,35 +432,35 @@ text is not support query and associative array(textではクエリーと連想�
 date: jsonl/date.jsonl[animal]
 ```
 
-This case is read jsonl file date.jsonl and query category animal. (この場合、date.jsonlファイルを読み込み、カテゴリーanimalをクエリします)
+This reads date.jsonl and queries the animal category.
 
 ```jsonl
 {"W":0.1, "C":["animal"], "V":"day", "animal":"cat"}
 {"W":0.1, "C":["animal"], "V":"day", "animal":"dog"}
 {"W":0.1, "C":["animal"], "V":"night", "animal":"bird"}
 {"W":0.1, "C":["animal"], "V":"night", "animal":"fish"}
-{"W":0.1, "C":["*"], "V":"moonnight", "animal":"bird"} // * is wlde card (*はワイルドカードです)
-{"W":0.1, "C":["animal","human"], "V":"night", "animal":"human"} // multiple category(複数のカテゴリー)
-{"W":0.1, "C":["insect"], "V":"night", "animal":"ant"} // not query(クエリーされない)
-{"weight":0.1, "category":["insect"],  "variable":"night", "animal":"ant"} // same as above(上と同じ)
+{"W":0.1, "C":["*"], "V":"moonnight", "animal":"bird"} // * is wlde card
+{"W":0.1, "C":["animal","human"], "V":"night", "animal":"human"} // multiple category
+{"W":0.1, "C":["insect"], "V":"night", "animal":"ant"} // not query
+{"weight":0.1, "category":["insect"],  "variable":"night", "animal":"ant"} // same as above
 ```
 
-"W","C","V" are shortcuts "weight", "category", "variable" (W,C,Vはweight, category, variablesのショートカットです) V can be array or string(Vは配列または文字列になります)
+"W", "C" and "V" are shortcuts for "weight", "category" and "variable". V can be an array or a string.
 
-This case is suppot query and associative array(このケースで連想配列がサポートされています)
+This format supports queries and associative arrays.
 
-Example(例)
+Example
 
 ```yaml
 variables:
   actions:
     - standing
     - sitting
-  all: jsonl/all.jsonl # all category(全てのカテゴリー)
-  date: jsonl/date.jsonl[animal] # category query(カテゴリークエリー)
+  all: jsonl/all.jsonl # all category
+  date: jsonl/date.jsonl[animal] # category query
   day: ${date} # variable = ${date[1]}
-  'animal': ${date["animal"]} # associative array(連想配列)
-  beings: jsonl/date.jsonl[animal,human] # multiple category(複数のカテゴリー) saparated by comma(カンマで区切る) not support space(スペースはサポートされません)
+  'animal': ${date["animal"]} # associative array
+  beings: jsonl/date.jsonl[animal,human] # multiple category saparated by comma not support space
 ```
 
 ### json
@@ -486,57 +478,53 @@ variables:
 ]
 ```
 
-- issue: query is not supported(クエリーはサポートされていません)
+- issue: query is not supported
 
 ### DB query
 
-SQLite DB query is supported. (SQLite の DB クエリーをサポートしています)
+SQLite database queries are supported.
 
 ```yaml
 database:
   db: sqlite3
-  db_connection: db/date.sqlite3 # db connection(データベース接続)
+  db_connection: db/date.sqlite3 # db connection
 variables:
   date: date_items[category = `animal`]
   cat: date_items[category = `animal` and animal = `cat`]
   named: date_items[__name__ = `animals__eyes`]
 ```
 
-DB rows use this schema:
-(DB の基本スキーマは次の通りです)
+Database rows use this schema:
 
 ```text
 name, category, weight, variable, attributes(json)
 ```
 
-Frequently used attributes can also be expanded into columns. `attributes` is still kept as JSON.
-(よく使う attribute は列として展開できますが、元の `attributes` JSON も保持されます)
+Frequently used attributes can also be expanded into columns; `attributes` remains available as JSON.
 
-`tools/jsonl2db.py` imports `.jsonl` into SQLite and can recurse directories.
-(`tools/jsonl2db.py` は `.jsonl` を SQLite に取り込みでき、ディレクトリの再帰投入にも対応しています)
+`tools/jsonl2db.py` imports `.jsonl` files into SQLite and can recurse through directories.
 
 ```shell
 python tools/jsonl2db.py ./jsonl ./db/items.sqlite3
 ```
 
-When a directory is given, `__name__` is generated from the relative path.
-(ディレクトリを指定した場合、`__name__` は相対パスから生成されます)
+When a directory is given, `__name__` is generated from its relative path.
 
 ### query suffixies add 2025/07/06
 
-The query suffixies is enable query suffix(クエリーサフィックスを有効にする)
-The query suffixies is used to query jsonl category. You can use different suffixes for different models (query suffixiesは、jsonlのカテゴリーをクエリするための接尾語です。modelによって、受け付ける単語が異なる場合にsuffixを使い分岐させることができます)
+Query suffixes can be enabled with the query_suffixies option.
+A query suffix selects a JSONL category suffix, so different models can use different terms.
 
 ```yaml
 options:
-  query_suffixies: [-xl] # enable query suffix(クエリーサフィックスを有効にする)
+  query_suffixies: [-xl] # enable query suffix
 variables:
-  date: jsonl/date.jsonl[animal] # query category animal(カテゴリーanimalとanimal-xlをクエリ)
+  date: jsonl/date.jsonl[animal] # query category animal
 ```
 
-## profile(プロファイル)
+## Profiles
 
-profile is override config file(設定ファイルをprofileで上書きします)
+A profile overrides the base configuration.
 
 ```yaml
 command:
@@ -545,7 +533,7 @@ command:
   enable_hr: true
   hr_scale: 2
 
-profiles: # override from default profile(デフォルトプロファイルから上書き)
+profiles: # override from default profile
   xl:
     command:
       width: 1024
@@ -553,15 +541,15 @@ profiles: # override from default profile(デフォルトプロファイルか�
       enable_hr: false
       refiner_switch_at: 0.7
   pory:
-    load_profile: [xl] # before Load profile xl(プロファイルxlを先に読み込む)
+    load_profile: [xl] # before Load profile xl
     command:
-      override_settings: # WebUIのSettingを上書きする
-        CLIP_stop_at_last_layers: 2 # CLIPの最終層を変更する(推奨 2)
-        emphasis: 'No norm' # 強調の設定
-        override_settings_restore_afterwards: true # 実行後にオプションを書き戻す
+      override_settings: # WebUISetting
+        CLIP_stop_at_last_layers: 2 # CLIP
+        emphasis: 'No norm' #
+        override_settings_restore_afterwards: true #
 ```
 
-run profile(プロファイルを実行)
+Run a profile.
 
 ```
 python cp2.py --profile xl input.yaml
@@ -571,7 +559,7 @@ python cp2.py --profile xl input.yaml
 # width = 1024, height = 1024, enable_hr = false, refiner_switch_at = 0.7
 ```
 
-load_profile is profile load in profile(プロファイルから他のプロファイルを読み込む)
+load_profile loads another profile from a profile entry.
 
 ```yaml
 profile:
@@ -587,29 +575,30 @@ profile:
       height: 512
 ```
 
-This case is preload profile defaut next animal, last xl (この場合、デフォルトプロファイル -> animalを先に読み込みます)
-load_profile is not suport nested profile(プロファイルは入れ子にできません)
+This example loads animal first and applies xl last.
+load_profile cannot be nested.
 
-## Forge Neo / conditional profiles
+## Forge Neo and conditional profiles
 
-Forge Neo supports the WebUI-compatible `txt2img` and `img2img` APIs. Start the
-server with `--api`; the default connection is `http://localhost:7860` and can be
-changed with `--api-base`. The supported static-image families follow the
-[Neo README](https://github.com/Haoming02/sd-webui-forge-classic/blob/neo/README.md).
-Video models, PiD/upscalers, VAEs and text encoders are not `model_type` families.
-SD2/SD3 are unavailable on Neo; existing WebUI/ComfyUI support remains separate.
+Forge Neo supports the WebUI-compatible txt2img and img2img APIs. Start the
+server with --api. The default connection is http://localhost:7860 and can be
+changed with --api-base. The supported static-image families follow the
+[Forge Neo model list](https://github.com/Haoming02/sd-webui-forge-classic/blob/neo/README.md).
+Video models, PiD/upscalers, VAEs and text encoders are not model families.
+SD2 and SD3 are unavailable on Neo; existing WebUI and ComfyUI support remains separate.
 
-### 設定の適用順
+### Application order
 
-**基本YAML → 通常profile → model_profile（親→子）→ checkpoint_profile → ui_profile → CLI上書き**
+**Base YAML -> regular profile -> model_profile (parent -> child) -> checkpoint_profile -> ui_profile -> CLI overrides**
 
-`model_profile` / `checkpoint_profile` / `ui_profile` はトップレベルのマッピングです。各項目には通常の
-profileと同じ `command`、`options`、`variables`、`array`、`methods`、`load_profile`
-などを記述できます。辞書は再帰マージ、配列・スカラーは置換、空の項目は何もしません。
-`load_profile` は既存の `profiles` を1段だけ先に読み込みます。
-`base_yaml` / `import` の読込順は従来どおりです。
+model_profile, checkpoint_profile and ui_profile are top-level mappings. Each
+entry accepts the same fields as a regular profile, including command, options,
+variables, array, methods and load_profile. Dictionaries are merged recursively;
+arrays and scalars replace previous values. Empty entries do nothing.
+load_profile loads an existing entry from profiles one level before the entry.
+base_yaml and import are processed in their existing order.
 
-```yaml
+~~~yaml
 version: 2
 options:
   ui_type: neo
@@ -627,15 +616,17 @@ model_profile:
 ui_profile:
   neo:
     command: { scheduler: Normal }
-```
+~~~
 
-モデル種別・版では共通設定を、`checkpoint_profile` では選択したチェックポイント固有の
-設定を記述します。チェックポイント名は `title`、`filename`、`model_name` と照合し、
-パス区切り、大小文字、拡張子、Forgeのハッシュサフィックスを吸収します。basenameまたは
-stemだけの指定も可能です。同じ優先度で複数の項目が一致する場合は曖昧さとしてエラーに
-します。チェックポイント固有の項目がなければ、`model_profile` までの設定だけを適用します。
+Use model_profile for family and version settings, and checkpoint_profile for
+settings specific to a selected checkpoint. Checkpoint keys are matched against
+title, filename, model_name, hash and sha256. Matching is case-insensitive,
+normalizes path separators and Forge hash suffixes, and accepts a full path,
+basename, stem, or a model name without its extension. Multiple matches at the
+same priority are rejected as ambiguous. An unknown checkpoint has no matching
+entry and leaves the profile unchanged.
 
-```yaml
+~~~yaml
 options:
   model_type: anima_2.9b
   model: JANIMAAnima_v1029B_bf16.safetensors
@@ -649,280 +640,260 @@ model_profile:
     command: { steps: 30, cfg_scale: 4 }
 
 checkpoint_profile:
-  JANIMAAnima_v1029B_bf16.safetensors:
+  JANIMAAnima_v1029B_bf16:
     command:
       sampler_name: Euler a
       scheduler: Normal
-```
+~~~
 
-`options.model_type` / `options.ui_type` を省略すると自動判定します。
-`--model-type` / `--ui-type` はYAMLより優先します。UI種別は
-`webui` / `forge` / `neo` / `comfy`。Neoは`ui_profile.forge`を継承しません。
-種別指定だけではAPI送信しません。WebUI系は`--api-mode`、ComfyUIは`--comfy`
-を使います。ComfyUIフラグと異なるUI種別の同時指定はエラーです。
+When options.model_type or options.ui_type is omitted, the type is detected
+automatically. The --model-type and --ui-type CLI options take precedence over
+YAML. UI types are webui, forge, neo and comfy. Neo does not inherit
+ui_profile.forge. A type selection alone does not send an API request:
+use --api-mode for WebUI-compatible APIs and --comfy for ComfyUI. Conflicting
+ComfyUI flags and UI types are errors.
 
-判定と条件別profileの適用は、通常profileの後・変数展開とmethods実行の前に
-**1実行につき一度**行います。`checkpoint_profile` は解決済みチェックポイントに対して
-一度だけ適用し、条件別profile内でモデルや種別を書き換えても再判定・再適用しません。
-異なるモデル系統をランダムに混ぜる場合は実行を分けてください。
+Detection and conditional profile application happen once per YAML run, after
+the regular profile and before variable expansion or methods. checkpoint_profile
+is resolved once for the selected checkpoint. A type or model changed by a
+conditional profile does not trigger another resolution. Run jobs with different
+model families separately.
 
-モデルはCLI/YAMLで指定したチェックポイントを優先し、未指定時は接続先の現在モデルを
-使います。取得できたモデルメタデータと名前・パスから判定し、UIプリセットだけでは
-断定しません。不明なら警告して判明した親種別まで適用し、完全に不明なら
-`model_profile`を省略します。固有名のモデルには`--model-type`を指定してください。
-チェックポイント固有設定を使う場合は、CLI/YAMLでチェックポイントを指定するか、APIの
-現在モデルが取得できる必要があります。
-オフライン生成ではAPIへ接続せず、明示指定と手元のモデル名を使用します。
-ログに判定結果・根拠・適用profileを表示します。
+An explicitly selected CLI or YAML checkpoint is preferred. Without one, the
+current API model is used. Detection uses available metadata and model names or
+paths; a UI preset alone is not evidence. Unknown families produce a warning
+and skip model_profile, while known ancestors can still be applied when the
+family is only partially identified. Offline generation uses explicit local
+information without contacting the API. The log records the detected type,
+evidence and applied profiles.
 
-### モデル種別
+### Model families
 
-右列の派生版は左列の設定を継承します。`→`は親から子への適用順です。
+Derived families inherit the settings of their parent in the order shown.
 
-| 共通キー      | 派生キー                                                |
-| ------------- | ------------------------------------------------------- |
-| `sd15`        | SD1.5                                                   |
-| `sdxl`        | `illustrius` → `noobai`、`pony`、`mugen`                |
-| `flux`        | `flux-dev`, `flux-schnell`, `flux-krea`, `flux-kontext` |
-| `flux2-klein` | `flux2-klein-4b`, `flux2-klein-9b`                      |
-| `chroma`      | `chroma-hd`                                             |
-| `lumina`      | `neta-lumina`, `netayume-lumina`                        |
-| `qwen-image`  | `qwen-image-edit`                                       |
-| `z-image`     | `z-image-turbo`                                         |
-| `anima`       | `anima_2b`, `anima_2.9b`, `anima_3.8b`, `anima-edit`    |
-| `ernie-image` | `ernie-image-turbo`                                     |
-| `krea2`       | `krea2-turbo`, `krea2-raw`, `krea2-edit`                |
+| Common key | Derived keys |
+| --- | --- |
+| sd15 | SD1.5 |
+| sdxl | illustrius -> noobai, pony, mugen |
+| flux | flux-dev, flux-schnell, flux-krea, flux-kontext |
+| flux2-klein | flux2-klein-4b, flux2-klein-9b |
+| chroma | chroma-hd |
+| lumina | neta-lumina, netayume-lumina |
+| qwen-image | qwen-image-edit |
+| z-image | z-image-turbo |
+| anima | anima_2b, anima_2.9b, anima_3.8b, anima-edit |
+| ernie-image | ernie-image-turbo |
+| krea2 | krea2-turbo, krea2-raw, krea2-edit |
 
-Animaの各版には`-edit`付きのキーもあります。例えば
-`anima_2.9b-edit`は`anima → anima_2.9b → anima-edit → anima_2.9b-edit`です。
-同様に`krea2-turbo-edit` / `krea2-raw-edit`は共通・派生版・共通Edit・個別Editの順です。
-版が不明なAnimaは`anima`だけ適用します。
+Anima version keys also have -edit variants. For example,
+anima_2.9b-edit applies anima -> anima_2.9b -> anima-edit ->
+anima_2.9b-edit. krea2-turbo-edit and krea2-raw-edit similarly include the
+common Edit profile. If the Anima version is unknown, only anima is applied.
 
-別名: `illustrious` → `illustrius`、`sd1` / `sd1.5` → `sd15`、
-`flux.1` / `flux1` → `flux`、`flux.1-kontext` → `flux-kontext`、
-`flux.2-klein` → `flux2-klein`、`chroma1-hd` → `chroma-hd`、
-`lumina-image-2.0` → `lumina`、`krea-2` → `krea2`、`anima_2.0b` → `anima_2b`。
-同じ種別を別名と重複して定義するとエラーになります。
-既存バックエンド用には`sd2`と`sd35`（別名`sd3` / `sd3.5`）も指定できます。
+Aliases include illustrious -> illustrius, sd1 and sd1.5 -> sd15,
+flux.1 and flux1 -> flux, flux.1-kontext -> flux-kontext,
+flux.2-klein -> flux2-klein, chroma1-hd -> chroma-hd,
+lumina-image-2.0 -> lumina, krea-2 -> krea2, and anima_2.0b -> anima_2b.
+Defining an alias and its canonical key twice is an error. sd2 and sd35
+(aliases sd3 and sd3.5) remain available for existing backends.
 
-### 画像入力・追加モジュール
+### Image inputs and additional modules
 
-| YAML (`options`配下)       | CLI                             | 用途                                                      |
-| -------------------------- | ------------------------------- | --------------------------------------------------------- |
-| `image`                    | `--image`                       | img2imgの初期画像                                         |
-| `mask`                     | `--mask`                        | img2imgのマスク                                           |
-| `reference_images`（配列） | `--reference-image`（繰返し可） | Neoの編集参照画像                                         |
-| `reference_max_size`       | —                               | 参照画像の最大辺。既定1024、0〜2048の256刻み、0は制限なし |
+| YAML option | CLI | Purpose |
+| --- | --- | --- |
+| image | --image | Initial img2img image |
+| mask | --mask | img2img mask |
+| reference_images (list) | --reference-image (repeatable) | Neo edit references |
+| reference_max_size | — | Maximum reference edge; default 1024 |
 
-相対パスは実行時の作業ディレクトリ基準です。画像はクライアントでBase64化します。
-`command.init_images` / `command.mask`にはパスまたは既存のBase64も渡せます。
-初期画像には`--api-type img2img`が必要です。参照画像はt2i/i2i両方で使えます。
-`reference_images`はNeoの`ImageStitch Integrated`に指定順で渡します。
-同じスクリプトの`alwayson_scripts`指定と併用するとエラーです。
-従来の画像ファイル／ディレクトリを位置引数にしたimg2imgも使用できます。
+Relative paths are resolved from the working directory. Images are converted
+to Base64 by the client. command.init_images and command.mask accept paths or
+existing Base64 values. Initial images require --api-type img2img. Reference
+images work for both t2i and i2i and are sent in order to Neo's ImageStitch
+Integrated script. Combining reference_images with the same alwayson_scripts
+entry is an error. Existing file and directory img2img inputs remain supported.
 
-Neo/ForgeのVAEは`options.vae`、テキストエンコーダーは`options.text_encoder`で指定します。
-どちらも配列またはカンマ区切り文字列にできます。旧設定の`options.sd_vae`も
-下位互換のため使用できます。CLIでは`--api-set-sd-vae`と`--text-encoder`を使えます。
-また、`command.override_settings.forge_additional_modules`で追加モジュールを直接指定できます。
-一覧APIで名前を解決し、不明・曖昧な名前はエラーにします。
-`Automatic`・未指定は現在の追加モジュールを維持し、空配列`[]`は明示的に解除します。
-`command.override_settings`なら`override_settings_restore_afterwards: true`で復元できます。
+For Neo and Forge, use options.vae and options.text_encoder. Each accepts a
+list or comma-separated string. options.sd_vae remains as a compatibility
+alias. The CLI names are --api-set-sd-vae and --text-encoder.
+command.override_settings.forge_additional_modules can specify modules directly.
+Names are resolved through the list API; missing or ambiguous names are errors.
+Automatic or omitted modules preserve the current selection, while [] explicitly
+clears it. Set override_settings_restore_afterwards: true to restore settings.
 
-Anima/Klein/Kreaの通常img2imgは編集切替を無効にし、参照画像またはEdit種別の指定時に
-有効にします。明示した`override_settings`は尊重します。
-Anima Edit・Krea 2 Editには対応する専用LoRAが別途必要です。自動取得は行いません。
-必要な設定やImageStitchがサーバーにない場合は送信前にエラーにします。
-モデルごとの品質・対応する操作はNeo側のモデル・モジュール構成にも依存します。
+Normal Anima, Klein and Krea img2img disables edit mode. Reference images or an
+Edit model type enables it. Explicit override_settings are respected. Anima
+Edit and Krea 2 Edit require their dedicated LoRA; the tool does not download it.
+Missing server capabilities are reported before sending a request.
 
-通常生成の例: [examples/neo-txt2img.yaml](examples/neo-txt2img.yaml)
+Normal generation example: examples/neo-txt2img.yaml
 
-```sh
+~~~sh
 python cp2.py examples/neo-txt2img.yaml --api-mode
 python cp2.py examples/neo-txt2img.yaml --api-mode --api-type img2img --image input.png --mask mask.png
-```
+~~~
 
-編集生成の例: [examples/neo-edit.yaml](examples/neo-edit.yaml)
+Edit generation example: examples/neo-edit.yaml
 
-```sh
+~~~sh
 python cp2.py examples/neo-edit.yaml --api-mode --reference-image first.png --reference-image second.png
-```
+~~~
 
-例のチェックポイント・追加モジュール名はインストール済みの名前に合わせてください。
-runnerの各profileにも`model_type`・`ui_type`・`image`・`mask`・`reference_images`を
-指定できます。img2imgのYAMLはrunner profileの`input`で指定します。
-生成APIの失敗、画像ゼロ、保存失敗は成功として返しません。
+Use checkpoint and module names that exist in your installation. Runner profiles
+also accept model_type, ui_type, image, mask and reference_images. An img2img
+YAML file is selected with the runner profile input field. API failures, zero
+images and save failures are returned as failures.
 
-インストール済みチェックポイントの切替確認には
-[examples/test_model_switch.py](examples/test_model_switch.py) と
-[examples/test-model-switch.ps1](examples/test-model-switch.ps1) を使えます。
-モデル名は環境ごとに異なるため、各チェックポイントを明示してください。
+Use examples/test_model_switch.py and examples/test-model-switch.ps1 to check
+installed checkpoint switching. Pass each checkpoint explicitly because names
+differ between installations.
 
-```powershell
-pwsh ./examples/test-model-switch.ps1 `
-  -AnimaModel "anima_2b.safetensors" `
-  -IllustriousModel "illustrious.safetensors" `
-  -PonyModel "pony.safetensors" -DryRun
-```
+~~~powershell
+pwsh ./examples/test-model-switch.ps1 -AnimaModel "anima_2b.safetensors" -IllustriousModel "illustrious.safetensors" -PonyModel "pony.safetensors" -DryRun
+~~~
 
-`-DryRun`を外すと各モデルを順番に切り替えます。`-Generate`を追加すると
-切替後に各モデルで1枚のt2iも実行します。テスト環境が使用中の場合はDryRunで
-引数と順序だけ確認できます。
+Remove -DryRun to switch checkpoints in sequence. Add -Generate to run one
+t2i image after each switch. DryRun checks arguments and order without using
+the test server.
+## Parser
 
-## Parser(パーサー)
+Expressions inside \$\{ \} can be parsed.
 
-sentence in \$\{ \} can be parsed (\$\{= \}の中に式が書けます)
-
-Example(例)
+Example
 
 ```yaml
-seed: ${=random_int()} # random seed(ランダムシード)
-width: ${=int(${size}) * 2} # width = size * 2(幅 = サイズ * 2)
+seed: ${=random_int()} # random seed
+width: ${=int(${size}) * 2} # width = size * 2
 ```
 
-### Parse tester (パーサーテスター)
+### Parser tester
 
-実行できるYAMLサンプルは[examples/formula.yaml](examples/formula.yaml)です。
-リポジトリのルートで次を実行すると、式を展開したJSONを保存します。画像生成APIは使用しません。
+The runnable YAML sample is [examples/formula.yaml](examples/formula.yaml). From the repository root, run it to save the expanded JSON. This does not call an image-generation API.
 
-```sh
+~~~sh
 python cp2.py examples/formula.yaml --output outputs/formula.json
-```
+~~~
 
-期待する出力は[examples/formula.expected.json](examples/formula.expected.json)です。
-四則演算の優先順位、変数、`>=`・`<=`、負数の関数引数、文字列の繰り返し、`split`を確認できます。
-YAMLの文字列変数を数値として計算するときは、サンプルの`int(size)`のように変換してください。
+The expected output is [examples/formula.expected.json](examples/formula.expected.json). It covers arithmetic precedence, variables, `>=` and `<=`, negative function arguments, string repetition and `split`.
 
-回帰テストと、サンプルのCLI実行・JSON保存のテスト:
+When calculating a YAML string variable as a number, convert it with `int(size)` as shown in the sample.
 
-```sh
+Regression tests and the sample CLI/JSON output test:
+
+~~~sh
 python -m pytest tests/test_formula_regressions.py tests/test_formula_sample.py tests/parser_test.py tests/prompt_v2_test.py -q
-```
+~~~
 
-```
-> python tools.py parser_test '2 + x * y' 'x=3,y=4'
-...
-...
-...
-14.0
+### Functions
 
-> python tools.py parser_test '"test" == str' 'str=test'
-...
-...
-...
-1       # true
-```
+Boolean values are not supported; results are 0 (false) or 1 (true).
 
-### current functions(現在の関数)
+Function arguments such as str1 and str2 are strings; x, y and similar arguments are numbers.
 
-not support boolean type (ブーリアン型はサポートされていません) retrun 0(false) or 1(true)(0(偽)または1(真)を返します)
-
-functions(関数) str1,str2,.. are string(文字列) and x,y... are number(数値)
-
-- chained("objects", 0.8, 3) : create chained string(連鎖変数) "object" = ${object} 0.8 is threshhold, 3 is max count(0.8は閾値、3は回数)
+- chained("objects", 0.8, 3): create a chained string. The first value is the threshold and the last value is the maximum count.
   - ex. chained("objects", 0.8, 3) -> \$\{objects} or \$\{objects}, \$\{object} or \$\{objects},\$\{object},\$\{object}
-- choice("objects") : choice one sobjects(オブジェクトの中から1つ選択)
+- choice("objects"): choose one value from objects.
   - choice("objects") -> \$\{objects}
-- contains(str1,str2, str3....) : str1 contains [str2, str3, ...] (文字列str1がstr2...を含むか)
+- contains(str1, str2, ...): test whether str1 contains every listed value.
   - contains("abc", "a", "b") -> 1, contain("abc", "e", "f") -> 0
-- attribute("objects", str2) : get attribute of variabled "objects"(変数str1の属性を取得)
+- attribute("objects", str2): get an attribute of the objects variable.
   - attribute("objects", "size") -> \$\{objects["size"]}
-- choice_index("objects", query, number) : choice index of objects(オブジェクトのインデックスを選択), query is 0.0 - 1.0(クエリは0.0 - 1.0の確率値)
+- choice_index("objects", query, number): choose an object index using a query value from 0.0 to 1.0.
   - choice_index("objects", query, 1) -> \$\{objects[1]}
-- choice_attribute("objects", query, attribute) : choice attribute of objects(オブジェクトの属性を選択)
+- choice_attribute("objects", query, attribute): choose an attribute from objects.
   - choice_attribute("objects", query, "size") -> \$\{objects["size"]}
-- value("objects", query) : get value of objects(オブジェクトの値を取得)
+- value("objects", query): get the value of objects.
   - value("objects", query) -> \$\{objects}
-- replace(str1, str2, str3) : replace str2 to str3 in str1(str1の中のstr2をstr3に置換)
+- replace(str1, str2, str3): replace str2 with str3 in str1.
   - replace("abc", "a", "b") -> "bbc"
-- split(str1, str2) : split str1 by str2(文字列str1をstr2で分割)
+- split(str1, str2): split str1 at str2.
   - split("a,b,c", ",") -> ["a", "b", "c"]
-- upper(str1) : upper case(大文字)
+- upper(str1): convert to uppercase.
   - upper("abc") -> "ABC"
-- lower(str1) : lower case(小文字)
+- lower(str1): convert to lowercase.
   - lower("ABC") -> "abc"
-- if(condition, truecase, falsecase) : if condition is true, return truecase, else return falsecase(ifのconditionがtrueの場合、truecaseを返し、それ以外はfalsecaseを返します)
+- if(condition, truecase, falsecase): return truecase when condition is true, otherwise falsecase.
   - if(1, "true", "false") -> "true", if(0, "true", "false") -> "false"
-- pow(x,y) : x^y(累乗)
-- sqrt(x) : square root(平方根)
-- abs(x) : absolute value(絶対値)
-- ceil(x) : round up(切り上げ)
-- floor(x) : round down(切り捨て)
-- round(x) : round(四捨五入)
-- trunc(x) : truncate(切り捨て)
-- int(str1) : string to integer(文字列を整数に変換)
-- float(str1) : string to float(文字列を浮動小数点に変換)
-- str(x) : number to string(数値を文字列に変換)
-- len(str1) : length of string(文字列の長さ)
-- max(x,y,...), max(str1,str2,...) : max number(最大値)
-- min(x,y,..), min(str1,str2,...) : min number(最小値)
-- not(condition) : 0 to 1, 1 to 0(0を1に、1を0に変換)
-- and(condition1, condition2) : and operation(論理積)
-- or(condition1, condition2) : or operation(論理和)
-- match(str1,str2) : match str1 to str2(文字列str1がstr2に一致)
+- pow(x, y): calculate x^y.
+- sqrt(x): calculate the square root.
+- abs(x): calculate the absolute value.
+- ceil(x): round up.
+- floor(x): round down.
+- round(x): round to the nearest value.
+- trunc(x): truncate the value.
+- int(str1): convert a string to an integer.
+- float(str1): convert a string to a floating-point number.
+- str(x): convert a number to a string.
+- len(str1): return the string length.
+- max(x, y, ...), max(str1, str2, ...): return the maximum value.
+- min(x, y, ...), min(str1, str2, ...): return the minimum value.
+- not(condition): convert 0 to 1 and 1 to 0.
+- and(condition1, condition2): logical AND.
+- or(condition1, condition2): logical OR.
+- match(str1, str2): test whether str1 matches str2.
   - match("abc", "a") -> 1, match("abc", "d") -> 0
-- substring(str1, start, end) : substring of str1(文字列str1の部分文字列)
+- substring(str1, start, end): return a substring of str1.
   - substring("abc", 1, 2) -> "b"
-- random(start, end) : random integer number(ランダムな整数) or random float number(ランダムな浮動小数点数)
-- random_int(): random integer number(ランダムな整数) 0 - 2^64 -1
-- random_float(): random float number(ランダムな浮動小数点数) 0 - 1
-- random_string(len): random string(ランダムな文字列) len characters
-- uuid(): random uuid(ランダムなuuid)
-- time(): current time(現在時刻)
-- date(): current date(現在日付)
-- datetime(): current datetime(現在日時)
-- timestamp(): current timestamp(現在のタイムスタンプ)
-- year(): current year(現在の年)
-- month(): current month(現在の月)
-- day(): current day(現在の日)
-- hour(): current hour(現在の時)
-- minute(): current minute(現在の分)
-- second(): current second(現在の秒)
-- weekday(): current weekday(現在の曜日)
-- week(): current week(現在の週)
+- random(start, end): generate a random integer or floating-point number.
+- random_int(): generate an integer from 0 to 2^64 - 1.
+- random_float(): generate a floating-point number from 0 to 1.
+- random_string(len): generate a random string of len characters.
+- uuid(): generate a random UUID.
+- time(): return the current time.
+- date(): return the current date.
+- datetime(): return the current date and time.
+- timestamp(): return the current timestamp.
+- year(): return the current year.
+- month(): return the current month.
+- day(): return the current day.
+- hour(): return the current hour.
+- minute(): return the current minute.
+- second(): return the current second.
+- weekday(): return the current weekday.
+- week(): return the current week.
 
-## save file (ファイルの保存)
+## Saving files
 
-- save file is save prompt list file(ファイルの保存はプロンプトリストファイルを保存します)
-- default save file pattern is \[num\]-\[seed\] (ファイル名パターンは\[num\]-\[seed\]です)
+- Saving a file writes the prompt list.
+- The default filename pattern is [num]-[seed].
 
-### save file pattern(ファイル名パターン)
+### Filename patterns
 
-- / folder separator(フォルダセパレータ)
-- \[num\] : number of image(画像の番号) 5 digits, but --num-length option is set(5桁ですが、--num-lengthオプションで設定できます)
-- \[seed\]: random seed(ランダムシード)
-- \[shortdate\]: current date(現在の日付) YYMMDD
-- \[DATE\]: current date(現在の日付) YYYYMMDD
-- \[date\]: current date(現在の日付) YYYY-MM-DD
-- \[datetime\]: current datetime(現在の日時) YYYYMMDDHHMMSS
-- \[shortyear\]: current year(現在の年) YY
-- \[year\]: current year(現在の年) YYYY
-- \[month\]: current month(現在の月) MM
-- \[day\]: current day(現在の日) DD
-- \[hour\]: current hour(現在の時) HH
-- \[min\]: current minute(現在の分) MM
-- \[sec\]: current second(現在の秒) SS
-- \[var:variable\]: variable(変数)
-- \[var:variable:attribute\]: variable\[attribute\] (変数の属性)
-- \[var:variable(index)\]: variable\[index\] (変数のインデックス)
-- \[info:key\]: info key(情報キー)
+- /: folder separator.
+- [num]: image number (five digits by default; change it with --num-length).
+- [seed]: random seed.
+- \[shortdate\]: current date YYMMDD
+- \[DATE\]: current date YYYYMMDD
+- \[date\]: current date YYYY-MM-DD
+- \[datetime\]: current datetime YYYYMMDDHHMMSS
+- \[shortyear\]: current year YY
+- \[year\]: current year YYYY
+- \[month\]: current month MM
+- \[day\]: current day DD
+- \[hour\]: current hour HH
+- \[min\]: current minute MM
+- \[sec\]: current second SS
+- [var:variable]: variable value.
+- [var:variable:attribute]: an attribute of a variable.
+- [var:variable(index)]: an indexed variable value.
+- [info:key]: metadata value.
 
 # ComfyUI
 
-ComfyUI flags are update.
+ComfyUI options are described below.
 
-- --comfy option is use ComfyUI API(--comfyを指定するとComfyUI APIを使います) --api-comfy option is deprecated.
-- Try to create workflow to run prompt in comfy(promptをcomfyで実行できるようにワークフローを作成を試みます)
+- Use `--comfy` for the ComfyUI API; `--api-comfy` is deprecated.
+- The tool can create a workflow for running a prompt in ComfyUI.
 - txt2img and img2img are supported. mask is treated as img2img + mask. hires.fix is not auto-generated.
-  (txt2img と img2img をサポートしています。mask は img2img + mask として扱います。hires.fix の自動生成は未対応です)
+
 - Auto workflow families: `sd15`, `sdxl`, `sd35`, `flux`, `anima`
-  (自動 workflow 生成の対応 family)
+
 - You can also load workflow directly. Save the workflow for the API in ComfyUI, or use YAML DSL with `comfyui:` / `workflow:`.
-  (workflow を直接読み込むこともできます。ComfyUI の API 用 workflow JSON に加えて、`comfyui:` / `workflow:` DSL も使えます)
+
 - Local save converts metadata to Automatic1111-like infotext and filename replacers such as `[seed]`, `[var:name]`, `[var:name:attr]`.
-  (ローカル保存時は Automatic1111 風の infotext と `[seed]`, `[var:name]`, `[var:name:attr]` などの filename replacer を使えます)
-- Some features for compatibility WebUI, ex. Scheduler, model file names(WebUIとの互換性維持のためのいくつかの補完機能)
-- When you use websocket, SaveImageWebsocket node name MUST be `save_image_websocket_node`. WebSocketを利用する場合、SaveImageWebsocketのworkflowの名前が`save_image_websocket_node`である必要があります。
+
+- Compatibility helpers cover WebUI fields such as scheduler and model filenames.
+- When using WebSocket, the SaveImageWebsocket node ID must be `save_image_websocket_node`.
   ```json
   "save_image_websocket_node": {
       "inputs": {
@@ -933,52 +904,50 @@ ComfyUI flags are update.
       },
       "class_type": "SaveImageWebsocket",
       "_meta": {
-        "title": "画像を保存するWebSocket"
+        "title": "WebSocket"
       }
     },
   ```
 
 ## ComfyUI options
 
-- `--comfy-family`: select workflow family `sd15|sdxl|sd35|flux|anima` (ワークフローファミリーを選択します)
-- `--comfy-mode`: `txt2img|img2img|interrogate` (ファンクションを選択します)
-- `--comfy-template`: use saved workflow / template file instead of pure auto-generated graph (workflowビルダー用のテンプレートを指定します)
+- `--comfy-family`: select workflow family `sd15|sdxl|sd35|flux|anima`
+- `--comfy-mode`: `txt2img|img2img|interrogate`
+- `--comfy-template`: use saved workflow / template file instead of pure auto-generated graph
 - `--comfy-image`: img2img input image
 - `--comfy-mask`: img2img mask image
 - `--comfy-controlnet`: append ControlNet settings. accepts JSON or `key=value,key=value`
 - `--comfy-lora`: append LoRA chain. format `name[:weight][@positive|negative|both]`
 - `--comfy-node`: override node definitions. format `role.field=value` or `role.inputs.key=value`
 
-## direct run workflow(ワークフローを直接実行)
+## Run a workflow directly
 
 ```shell
 python cp2.py --api-output-dir ./outputs/txt2img-images --comfy --api-base http://localhost:8188 --image-type webp --api-input-json ./workflow_api.json
 ```
 
-## direct run img2img(ComfyUI)
+## Run img2img directly (ComfyUI)
 
 ```shell
 python cp2.py prompt.yaml --comfy --comfy-mode img2img --comfy-family flux --comfy-image ./inputs/src.png --comfy-mask ./inputs/mask.png --api-base http://localhost:8188
 ```
 
-## anima template example
+## Anima template example
 
 The practical `anima` example is based on a saved workflow like `UNETLoader -> ModelSamplingAuraFlow -> KSampler`, plus `CLIPLoader` and `VAELoader`.
-(`anima` の実用例は `UNETLoader -> ModelSamplingAuraFlow -> KSampler` と `CLIPLoader`, `VAELoader` を使う保存済み workflow ベースです)
 
 - YAML example: [examples/anima-template.yaml](/c:/Users/misir/OneDrive/source/python/create-txt/examples/anima-template.yaml)
 - Workflow JSON example: [examples/anima-template-api.json](/c:/Users/misir/OneDrive/source/python/create-txt/examples/anima-template-api.json)
 
-Run example:
+Example command:
 
 ```shell
 python cp2.py ./examples/anima-template.yaml --comfy --api-base http://localhost:8188 --api-output-dir ./outputs/anima-example
 ```
 
 `_controlnet_slots` is optional. If present, `controlnet[0].image` etc. can be injected into the saved workflow.
-(`_controlnet_slots` は任意です。定義すると `controlnet[0].image` などを保存済み workflow に注入できます)
 
-## Use workflow instead of prompt(Promptの代わりにWorkflowを使う)
+## Use a workflow instead of a prompt
 
 ```shell
 python cp2.py prompts/prompt.yaml --api-output-dir ./outputs/txt2img-images --comfy --api-base http://localhost:8188 --image-type webp --max-number 1 --api-filename-pattern '[num]-[seed]'
@@ -1004,7 +973,7 @@ command: ./workflows_apijson
 {
   "3": {
     "inputs": {
-      "seed": "${seed}", // random seed(ランダムシード)
+      "seed": "${seed}", // random seed
       "steps": 25,
       "cfg": 12.5,
       "sampler_name": "dpmpp_sde",
@@ -1021,7 +990,7 @@ command: ./workflows_apijson
     }
   },
   "19": {
-    // positive prompt(ポジティブプロンプト)
+    // positive prompt
     "inputs": {
       "width": 4096,
       "height": 4096,
@@ -1039,7 +1008,7 @@ command: ./workflows_apijson
     }
   },
   "20": {
-    // negative prompt(ネガティブプロンプト)
+    // negative prompt
     "inputs": {
       "width": 4096,
       "height": 4096,
@@ -1058,7 +1027,7 @@ command: ./workflows_apijson
   },
   // ...
   // Can save locally by setting the node id of "save_image_websocket_node" to "save_image_websocket_node"
-  // Save image to websocket(画像をwebsocketに保存) の node idを"save_image_websocket_node"にするとローカルに保存可能
+  // Save image to websocket  node id"save_image_websocket_node"
   "save_image_websocket_node": {
     "inputs": {
       "images": [
@@ -1074,58 +1043,58 @@ command: ./workflows_apijson
 }
 ```
 
-# issue(問題)
+# Known issues
 
-- issue #1 nseted associative array is not supported(入れ子の連想配列はサポートされていません)
-- issue #2 SQLite only for DB query right now (DBクエリーは現状 SQLite のみ対応です)
-- issue #3 nested profile is not supported(入れ子プロファイルはサポートされていません)
-- issue #4 multi thread is not supported(マルチスレッドはサポートされていません)
-- arrayed attributes(配列アトリビュート)
+- issue #1 nseted associative array is not supported
+- issue #2 SQLite only for DB query right now
+- issue #3 nested profile is not supported
+- issue #4 multi thread is not supported
+- Array attributes are not supported in all contexts.
 
-# todo: until V2(V2までの予定)
+# TODO for V2
 
-## completed(完了)
+## Completed
 
-- [x] new create prompt(新しいcreate prompt)
-- [x] support ComfyUI API(ComfyUI APIのサポート)
-  - [x] workflow checker(ワークフローチェッカー)
-  - [x] create WebUI like workflow(WebUIの様なWorkflowの作成)
-- [x] support jsonl(サポートjsonl)
-- [x] support profile(プロファイルのサポート)
-- [x] powerful paser(パーサーの強化)
-- [x] Support Controlnet in txt2img(txt2imgでControlnetをサポート)
-- [x] support attribute(アトリビュートのサポート)
-- [x] categroy query for jsonl(jsonl カテゴリークエリー)
-- [x] support webp(webpのサポート)
-- [x] buckground save images(バックグラウンドで画像を保存)
-- [x] save images with subfolder(画像を保存にサブフォルダを指定)
-- [x] fix log rotation logic(ログローテーションロジックの修正)
+- [x] New prompt creator
+- [x] ComfyUI API support
+  - [x] Workflow checker
+  - [x] WebUI-like workflow creation
+- [x] JSONL support
+- [x] Profile support
+- [x] More powerful parser
+- [x] ControlNet support for txt2img
+- [x] Attribute support
+- [x] JSONL category queries
+- [x] WebP support
+- [x] Background image saving
+- [x] Save images in subfolders
+- [x] Fixed log rotation
 
 ## todo
 
-- convert tools(json, jsonl, txt, csv)
-- [x] create workflow sd3 for ComfyUI(ComfyUI用のsd3ワークフローの作成)
-- category query for json(json カテゴリークエリー)
-- [x] support forge API, Forge API has many bugs, yet(Forge APIのサポート、ForgeのAPIは、未だ多くのバグがあり挙動が不安定)
-- adjustment arguments(引数の調整) arguments from profile(プロファイルからの引数) →　v2.1 or later
-- Class based codes(クラスベースのコード)　→ v2.1 or later
-- [x] more ComfyUI support(ComfyUIのサポートを強化) img2img, hires.fix　→ v2.1 or later
-- [x] jpg, webp saves warkflow for ComfyUI(ComfyUI用のjpg, webpワークフロー保存 --comfy-metadata)　→ v2.1 or later
-- Support Controlnet in img2img(img2imgでControlnetをサポート) → v2.1 or later
-- support upscaling(アップスケーリングのサポート) → v2.1 or later
-- more functions(関数の追加) → v2.1 or later
-  - value_choice(variable) : get one value of variable array(変数の配列から1つの値を取得)
+- Convert JSON, JSONL, TXT and CSV files
+- [x] Create an SD3 workflow for ComfyUI
+- JSON category queries
+- [x] Forge API support (the API still has known bugs)
+- Adjust arguments and profile arguments (v2.1 or later)
+- Class-based code (v2.1 or later)
+- [x] More ComfyUI support, including img2img and hires.fix (v2.1 or later)
+- [x] Save jpg/WebP workflows for ComfyUI (v2.1 or later)
+- ControlNet support for img2img (v2.1 or later)
+- Upscaling support (v2.1 or later)
+- More functions (v2.1 or later)
+  - value_choice(variable): get one value from a variable array
 
-# feature: until V3(V3までの予定)
+# Planned for V3
 
-- programing language like parser(プログラミング言語のようなパーサー)
-- configuration tools(設定ツール)
-- support database backends other than SQLite(SQLite 以外のデータベース対応)
-- extention for WebUI(WebUIのextention)
-- custom node for ComfyUI(ComfyUIのカスタムノード)
-- support "segment anything" ("segment anything"のサポート)
-- background download civitai/huggingface models(バックグラウンドでcivitaiのmodelダウンロード)
+- A programming-language-like parser
+- Configuration tools
+- Database backends other than SQLite
+- WebUI extension
+- ComfyUI custom nodes
+- Support for "segment anything"
+- Background downloads from Civitai and Hugging Face
 
-# V1(旧バージョン)
+# V1
 
-see [READMEV1.md](READMEV1.md)
+See [READMEV1.md](READMEV1.md).
