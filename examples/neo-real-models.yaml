@@ -34,9 +34,9 @@ tests:
       negative_prompt: blurry, low quality
       width: 512
       height: 512
-      steps: 2
+      steps: 24
       cfg_scale: 4
-      sampler_name: Euler a
+      sampler_name: Euler
       scheduler: Normal
       seed: 41002
 
@@ -53,10 +53,10 @@ tests:
       negative_prompt: blurry, low quality
       width: 512
       height: 512
-      steps: 2
+      steps: 25
       cfg_scale: 5
-      sampler_name: Euler
-      scheduler: Normal
+      sampler_name: DPM++ 2M SDE
+      scheduler: Karras
       seed: 41003
 
   - name: pony-wai-ani-nsfw-v140
@@ -71,8 +71,8 @@ tests:
       negative_prompt: blurry, low quality
       width: 512
       height: 512
-      steps: 2
+      steps: 25
       cfg_scale: 5
-      sampler_name: Euler
-      scheduler: Normal
+      sampler_name: Euler a
+      scheduler: Karras
       seed: 41004
