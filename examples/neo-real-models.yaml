@@ -1,0 +1,78 @@
+# Forge Neo実環境のモデル切替スモークテスト。
+# 実行: python examples/test_neo_models.py examples/neo-real-models.yaml
+# 生成まで行う場合: python examples/test_neo_models.py examples/neo-real-models.yaml --generate
+api_base: http://localhost:7860
+output_dir: ./outputs/neo-real-models
+tests:
+  - name: flux2-klein-4b
+    model: flux-2-klein-4b.safetensors
+    model_type: flux2-klein-4b
+    ui_type: neo
+    options:
+      vae: flux2-vae.safetensors
+      text_encoder: qwen_3_4b.safetensors
+    command:
+      prompt: a small ceramic teapot on a wooden table
+      negative_prompt: blurry, low quality
+      width: 512
+      height: 512
+      steps: 4
+      cfg_scale: 1
+      sampler_name: Euler
+      scheduler: Beta
+      seed: 41001
+
+  - name: anima-aesthetic-v11
+    model: anima_aestheticV11.safetensors
+    model_type: anima
+    ui_type: neo
+    options:
+      vae: qwen_image_vae.safetensors
+      text_encoder: Qwen3-0.6B-Base.Q8_0.gguf
+    command:
+      prompt: a small ceramic teapot on a wooden table
+      negative_prompt: blurry, low quality
+      width: 512
+      height: 512
+      steps: 2
+      cfg_scale: 4
+      sampler_name: Euler a
+      scheduler: Normal
+      seed: 41002
+
+  - name: illustrious-wai-nsfw-v150
+    model: il/waiNSFWIllustrious_v150.safetensors
+    model_type: illustrius
+    ui_type: neo
+    options:
+      # SDXLの内蔵エンコーダーを使うため、Animaの追加モジュールを解除する。
+      vae: []
+      text_encoder: Automatic
+    command:
+      prompt: a studio portrait of a person in a formal suit
+      negative_prompt: blurry, low quality
+      width: 512
+      height: 512
+      steps: 2
+      cfg_scale: 5
+      sampler_name: Euler
+      scheduler: Normal
+      seed: 41003
+
+  - name: pony-wai-ani-nsfw-v140
+    model: pony/waiANINSFWPONYXL_v140.safetensors
+    model_type: pony
+    ui_type: neo
+    options:
+      vae: []
+      text_encoder: Automatic
+    command:
+      prompt: a studio portrait of a person in a formal suit
+      negative_prompt: blurry, low quality
+      width: 512
+      height: 512
+      steps: 2
+      cfg_scale: 5
+      sampler_name: Euler
+      scheduler: Normal
+      seed: 41004
