@@ -5,7 +5,8 @@ import yaml
 
 import cp2
 from modules.generation_profile import (
-    apply_generation_profiles, infer_model_type, model_chain, resolve_context,
+    apply_generation_profiles, checkpoint_identifiers, infer_model_type, model_chain,
+    resolve_context,
 )
 from modules.prompt_v2 import create_text_v2
 from modules import webui
@@ -91,6 +92,169 @@ def test_model_profile_options_include_modules():
     ]
     assert yml["options"]["vae"] == "noobai-vae"
     assert yml["options"]["text_encoder"] == "clip-l"
+
+
+def test_checkpoint_profile_applies_after_model_before_ui_and_before_expansion():
+    yml = {
+        "options": {"model_type": "anima_2.9b", "model": "JANIMAAnima_v1029B_bf16.safetensors"},
+        "command": {"prompt": "${subject}", "steps": 1},
+        "variables": {"subject": ["base"]},
+        "profiles": {"checkpoint-base": {"command": {"width": 1024}}},
+        "model_profile": {
+            "anima": {"command": {"steps": 20}, "variables": {"subject": ["anima"]}},
+            "anima_2.9b": {"command": {"steps": 24}, "options": {"vae": "base-vae"}},
+        },
+        "checkpoint_profile": {
+            "JANIMAAnima_v1029B_bf16.safetensors": {
+                "load_profile": "checkpoint-base",
+                "command": {"steps": 30},
+                "variables": {"subject": ["checkpoint"]},
+                "options": {"text_encoder": "qwen-encoder"},
+            },
+        },
+        "ui_profile": {"neo": {"command": {"steps": 32}, "variables": {"subject": ["ui"]}}},
+    }
+
+    context = apply_generation_profiles(yml, {"ui_type": "neo"})
+
+    assert context["checkpoint"] == "JANIMAAnima_v1029B_bf16.safetensors"
+    assert context["applied_profiles"] == [
+        "model_profile.anima",
+        "model_profile.anima_2.9b",
+        "checkpoint_profile.JANIMAAnima_v1029B_bf16.safetensors",
+        "ui_profile.neo",
+    ]
+    assert yml["command"] == {"prompt": "${subject}", "steps": 32, "width": 1024}
+    assert yml["options"]["vae"] == "base-vae"
+    assert yml["options"]["text_encoder"] == "qwen-encoder"
+    assert yml["variables"]["subject"] == ["ui"]
+
+
+def test_checkpoint_profile_matches_path_basename_stem_and_hash_suffix():
+    assert checkpoint_identifiers(r"models\anima\JANIMAAnima_v1029B_bf16.safetensors [abc123]") == {
+        "models/anima/janimaanima_v1029b_bf16.safetensors",
+        "janimaanima_v1029b_bf16.safetensors",
+        "janimaanima_v1029b_bf16",
+    }
+    yml = {
+        "options": {"model": r"E:\models\JANIMAAnima_v1029B_bf16.safetensors [abc123]"},
+        "command": {},
+        "checkpoint_profile": {
+            "JANIMAAnima_v1029B_bf16.safetensors": {"command": {"cfg_scale": 4}}
+        },
+    }
+    context = apply_generation_profiles(yml, {})
+    assert context["applied_profiles"] == [
+        "checkpoint_profile.JANIMAAnima_v1029B_bf16.safetensors"
+    ]
+    assert yml["command"]["cfg_scale"] == 4
+
+    yml["options"]["model"] = r"E:\models\JANIMAAnima_v1029B_bf16.safetensors"
+    yml["checkpoint_profile"] = {
+        "JANIMAAnima_v1029B_bf16": {"command": {"steps": 31}}
+    }
+    context = apply_generation_profiles(yml, {})
+    assert context["applied_profiles"] == [
+        "checkpoint_profile.JANIMAAnima_v1029B_bf16"
+    ]
+    assert yml["command"]["steps"] == 31
+
+
+def test_checkpoint_profile_unknown_and_empty_are_noop():
+    empty = {"options": {"model": "unknown.safetensors"}, "command": {"steps": 1},
+             "checkpoint_profile": {}}
+    context = apply_generation_profiles(empty, {})
+    assert context["applied_profiles"] == []
+    assert empty["command"] == {"steps": 1}
+
+    unknown = {"options": {"model": "unknown.safetensors"}, "command": {"steps": 1},
+               "checkpoint_profile": {"known.safetensors": {"command": {"steps": 2}}}}
+    context = apply_generation_profiles(unknown, {})
+    assert context["applied_profiles"] == []
+    assert unknown["command"] == {"steps": 1}
+
+
+def test_checkpoint_profile_duplicate_match_is_rejected():
+    yml = {
+        "options": {"model": "shared.safetensors"},
+        "checkpoint_profile": {
+            r"models\a\shared.safetensors": {},
+            r"models\b\shared.safetensors": {},
+        },
+    }
+    with pytest.raises(ValueError, match="Ambiguous checkpoint_profile"):
+        apply_generation_profiles(yml, {})
+
+
+def test_checkpoint_profile_prefers_exact_path_over_duplicate_basename():
+    yml = {
+        "options": {"model": r"models\a\shared.safetensors"},
+        "checkpoint_profile": {
+            r"models\a\shared.safetensors": {"command": {"cfg_scale": 3}},
+            r"models\b\shared.safetensors": {"command": {"cfg_scale": 4}},
+            "shared.safetensors": {"command": {"cfg_scale": 5}},
+        },
+    }
+    context = apply_generation_profiles(yml, {})
+    assert context["applied_profiles"] == [
+        r"checkpoint_profile.models\a\shared.safetensors"
+    ]
+    assert yml["command"]["cfg_scale"] == 3
+
+
+def test_checkpoint_profile_matches_api_model_entry(monkeypatch):
+    monkeypatch.setattr(webui, "inspect_server", lambda *a: {
+        "ui_type": "neo",
+        "options": {"sd_model_checkpoint": r"anima\JANIMAAnima_v1029B_bf16.safetensors [abc123]"},
+        "models": [{
+            "title": r"anima\JANIMAAnima_v1029B_bf16.safetensors [abc123]",
+            "model_name": "anima_JANIMAAnima_v1029B_bf16",
+            "filename": r"E:\models\JANIMAAnima_v1029B_bf16.safetensors",
+        }],
+    })
+    yml = {
+        "options": {"ui_type": "neo"},
+        "command": {},
+        "checkpoint_profile": {
+            "JANIMAAnima_v1029B_bf16.safetensors": {"command": {"steps": 30}}
+        },
+    }
+    context = apply_generation_profiles(yml, {"api_mode": True})
+    assert context["checkpoint_entry"]["model_name"] == "anima_JANIMAAnima_v1029B_bf16"
+    assert context["applied_profiles"] == [
+        "checkpoint_profile.JANIMAAnima_v1029B_bf16.safetensors"
+    ]
+    assert yml["command"]["steps"] == 30
+
+
+def test_checkpoint_profile_is_expanded_before_variables(tmp_path):
+    path = tmp_path / "checkpoint-profile.yaml"
+    path.write_text("""version: 2
+options:
+  json: true
+  model: exact.safetensors
+  model_type: anima
+  ui_type: neo
+command: {prompt: '${subject}'}
+variables: {subject: [base]}
+methods: [{random: 1}]
+model_profile:
+  anima:
+    variables: {subject: [anima]}
+checkpoint_profile:
+  exact.safetensors:
+    variables: {subject: [checkpoint]}
+ui_profile:
+  neo:
+    variables: {subject: [ui]}
+""", encoding="utf-8")
+    result = create_text_v2({"input": str(path), "max_number": -1})
+    assert result["output_text"][0]["prompt"] == "ui"
+    assert result["yml"]["_generation_context"]["applied_profiles"] == [
+        "model_profile.anima",
+        "checkpoint_profile.exact.safetensors",
+        "ui_profile.neo",
+    ]
 
 
 @pytest.mark.parametrize(("name", "expected"), [

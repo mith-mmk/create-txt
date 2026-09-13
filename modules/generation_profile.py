@@ -9,31 +9,66 @@ Logger = getDefaultLogger()
 
 # Parent order is also the order in which configuration is applied.
 MODEL_PARENTS = {
-    "sd15": None, "sdxl": None, "illustrius": "sdxl", "noobai": "illustrius",
+    "sd15": None,
+    "sdxl": None,
+    "illustrius": "sdxl",
+    "noobai": "illustrius",
     "pony": "sdxl",
-    "mugen": "sdxl", "flux": None, "flux-dev": "flux", "flux-schnell": "flux",
-    "flux-krea": "flux", "flux-kontext": "flux", "flux2-klein": None,
-    "flux2-klein-4b": "flux2-klein", "flux2-klein-9b": "flux2-klein",
-    "chroma": None, "chroma-hd": "chroma", "lumina": None,
-    "neta-lumina": "lumina", "netayume-lumina": "lumina",
-    "qwen-image": None, "qwen-image-edit": "qwen-image",
-    "z-image": None, "z-image-turbo": "z-image",
-    "anima": None, "anima_2b": "anima", "anima_2.9b": "anima",
-    "anima_3.8b": "anima", "anima-edit": "anima",
-    "anima_2b-edit": "anima_2b", "anima_2.9b-edit": "anima_2.9b",
+    "mugen": "sdxl",
+    "flux": None,
+    "flux-dev": "flux",
+    "flux-schnell": "flux",
+    "flux-krea": "flux",
+    "flux-kontext": "flux",
+    "flux2-klein": None,
+    "flux2-klein-4b": "flux2-klein",
+    "flux2-klein-9b": "flux2-klein",
+    "chroma": None,
+    "chroma-hd": "chroma",
+    "lumina": None,
+    "neta-lumina": "lumina",
+    "netayume-lumina": "lumina",
+    "qwen-image": None,
+    "qwen-image-edit": "qwen-image",
+    "z-image": None,
+    "z-image-turbo": "z-image",
+    "anima": None,
+    "anima_2b": "anima",
+    "anima_2.9b": "anima",
+    "anima_3.8b": "anima",
+    "anima-edit": "anima",
+    "anima_2b-edit": "anima_2b",
+    "anima_2.9b-edit": "anima_2.9b",
     "anima_3.8b-edit": "anima_3.8b",
-    "ernie-image": None, "ernie-image-turbo": "ernie-image",
-    "krea2": None, "krea2-turbo": "krea2", "krea2-raw": "krea2",
-    "krea2-edit": "krea2", "krea2-turbo-edit": "krea2-turbo", "krea2-raw-edit": "krea2-raw",
+    "ernie-image": None,
+    "ernie-image-turbo": "ernie-image",
+    "krea2": None,
+    "krea2-turbo": "krea2",
+    "krea2-raw": "krea2",
+    "krea2-edit": "krea2",
+    "krea2-turbo-edit": "krea2-turbo",
+    "krea2-raw-edit": "krea2-raw",
     # Existing ComfyUI/WebUI families; deliberately rejected only on Neo.
-    "sd2": None, "sd35": None,
+    "sd2": None,
+    "sd35": None,
 }
 MODEL_ALIASES = {
-    "illustrious": "illustrius", "sd1": "sd15", "sd1.5": "sd15",
-    "sd3": "sd35", "sd3.5": "sd35", "flux.1": "flux", "flux1": "flux",
-    "flux.1-kontext": "flux-kontext", "flux.2-klein": "flux2-klein",
-    "chroma1-hd": "chroma-hd", "lumina-image-2.0": "lumina",
-    "krea-2": "krea2", "anima_2.0b": "anima_2b",
+    "illustrious": "illustrius",
+    "il": "illustrius",
+    "sd1": "sd15",
+    "sd1.5": "sd15",
+    "noob-ai": "noobai",
+    "flux1": "flux",
+    "sd3": "sd35",
+    "sd3.5": "sd35",
+    "flux.1": "flux",
+    "flux1": "flux",
+    "flux.1-kontext": "flux-kontext",
+    "flux.2-klein": "flux2-klein",
+    "chroma1-hd": "chroma-hd",
+    "lumina-image-2.0": "lumina",
+    "krea-2": "krea2",
+    "anima_2.0b": "anima_2b",
 }
 UI_TYPES = ("webui", "forge", "neo", "comfy")
 
@@ -75,8 +110,9 @@ def infer_model_type(name):
     if "illustri" in compact:
         return "illustrius"
     if "anima" in name and "animagine" not in name:
-        version = next((v for v in ("2.9b", "3.8b", "2b")
-                        if v.replace(".", "") in compact), None)
+        version = next(
+            (v for v in ("2.9b", "3.8b", "2b") if v.replace(".", "") in compact), None
+        )
         family = f"anima_{version}" if version else "anima"
         return family + "-edit" if "edit" in name else family
     if "qwen" in name and ("image" in name or "edit" in name):
@@ -88,7 +124,11 @@ def infer_model_type(name):
         return "flux-kontext"
     if "krea2" in compact:
         variant = next((v for v in ("turbo", "raw") if v in name), None)
-        return "krea2" + (f"-{variant}" if variant else "") + ("-edit" if "edit" in name else "")
+        return (
+            "krea2"
+            + (f"-{variant}" if variant else "")
+            + ("-edit" if "edit" in name else "")
+        )
     if "ernieimage" in compact:
         return "ernie-image-turbo" if "turbo" in name else "ernie-image"
     if "zimage" in compact:
@@ -96,8 +136,11 @@ def infer_model_type(name):
     if "chroma" in name:
         return "chroma-hd" if "hd" in name else "chroma"
     if "lumina" in name:
-        return "netayume-lumina" if "netayume" in name else (
-            "neta-lumina" if "neta" in name else "lumina")
+        return (
+            "netayume-lumina"
+            if "netayume" in name
+            else ("neta-lumina" if "neta" in name else "lumina")
+        )
     if "mugen" in name:
         return "mugen"
     if "flux" in name and not re.search(r"flux[._ -]?2", name):
@@ -107,10 +150,61 @@ def infer_model_type(name):
         return "sdxl"
     if "sd35" in compact or "sd3" in compact:
         return "sd35"
-    if ("sd15" in compact or "stablediffusionv1" in compact or
-            re.search(r"(?:^|/)v1[-_.]5(?:[-_.]|$)", name) or compact in ("sd1", "sdv1")):
+    if (
+        "sd15" in compact
+        or "stablediffusionv1" in compact
+        or re.search(r"(?:^|/)v1[-_.]5(?:[-_.]|$)", name)
+        or compact in ("sd1", "sdv1")
+    ):
         return "sd15"
     return None
+
+
+def _checkpoint_value(value):
+    """Return a comparable checkpoint identifier.
+
+    Forge titles may contain a hash suffix and Windows paths use a different
+    separator from YAML examples.  Keep matching case-insensitive and compare
+    both the full path and its basename/stem in ``checkpoint_profile``.
+    """
+    if not isinstance(value, str):
+        return None
+    value = value.strip().replace("\\", "/").casefold()
+    value = re.sub(r"\s+\[[0-9a-f]+\]$", "", value)
+    return value or None
+
+
+def checkpoint_identifiers(value):
+    """Build identifiers compatible with WebUI checkpoint selection."""
+    normalized = _checkpoint_value(value)
+    if not normalized:
+        return set()
+    basename = normalized.rsplit("/", 1)[-1]
+    result = {normalized, basename}
+    for suffix in (".safetensors", ".ckpt", ".pt", ".pth"):
+        if basename.endswith(suffix):
+            result.add(basename[: -len(suffix)])
+            break
+    return result
+
+
+def _checkpoint_components(value):
+    """Return full-name, basename and stem identifiers for one value."""
+    normalized = _checkpoint_value(value)
+    if not normalized:
+        return set(), set(), set()
+    basename = normalized.rsplit("/", 1)[-1]
+    stems = set()
+    for suffix in (".safetensors", ".ckpt", ".pt", ".pth"):
+        if basename.endswith(suffix):
+            stems.add(basename[: -len(suffix)])
+            break
+    # A WebUI model_name (and a convenient YAML key) commonly omits the
+    # checkpoint extension.  Treat that basename as its own stem so
+    # ``JANIMAAnima_v1029B_bf16`` matches the corresponding safetensors file.
+    if not stems:
+        stems.add(basename)
+    return {normalized}, {basename}, stems
 
 
 def merge(target, patch):
@@ -137,8 +231,12 @@ def apply_profile(yml, profile, label):
         if not isinstance(pre, dict):
             raise ValueError(f"profiles.{name} must be a mapping")
         # Same one-level load_profile behavior as regular profiles.
-        merge(yml, {k: v for k, v in pre.items() if k not in ("load_profile", "profile")})
-    merge(yml, {k: v for k, v in profile.items() if k not in ("load_profile", "profile")})
+        merge(
+            yml, {k: v for k, v in pre.items() if k not in ("load_profile", "profile")}
+        )
+    merge(
+        yml, {k: v for k, v in profile.items() if k not in ("load_profile", "profile")}
+    )
 
 
 def resolve_context(yml, opt):
@@ -154,16 +252,26 @@ def resolve_context(yml, opt):
         raise ValueError(f"Unsupported ui_type: {ui}")
     if comfy and ui and ui != "comfy":
         raise ValueError("ComfyUI flags conflict with ui_type")
-    model_type = normalize_model_type(opt.get("model_type") or options.get("model_type"))
+    model_type = normalize_model_type(
+        opt.get("model_type") or options.get("model_type")
+    )
     command = yml.get("command", {})
-    checkpoint = (opt.get("api_set_sd_model") or options.get("model") or
-                  options.get("sd_model") or
-                  (command.get("override_settings", {}).get("sd_model_checkpoint")
-                   if isinstance(command, dict) else None))
+    checkpoint = (
+        opt.get("api_set_sd_model")
+        or options.get("model")
+        or options.get("sd_model")
+        or (
+            command.get("override_settings", {}).get("sd_model_checkpoint")
+            if isinstance(command, dict)
+            else None
+        )
+    )
     server = {}
     if active and not comfy and ui != "comfy":
-        server = inspect_server(opt.get("api_base", "http://localhost:7860"),
-                                opt.get("api_userpass") or options.get("userpass"))
+        server = inspect_server(
+            opt.get("api_base", "http://localhost:7860"),
+            opt.get("api_userpass") or options.get("userpass"),
+        )
     ui = ui or ("comfy" if comfy else server.get("ui_type"))
     if ui == "comfy" and opt.get("api_mode") and not comfy:
         raise ValueError("ui_type=comfy requires --comfy (not --api-mode)")
@@ -173,10 +281,17 @@ def resolve_context(yml, opt):
         entry = lookup_model(server.get("models", []), checkpoint, required=False)
         metadata = entry.get("metadata", {}) if entry else {}
         if entry and active:
-            metadata = metadata or read_metadata(opt.get("api_base", "http://localhost:7860"),
-                                                 entry, opt.get("api_userpass") or options.get("userpass"))
+            metadata = metadata or read_metadata(
+                opt.get("api_base", "http://localhost:7860"),
+                entry,
+                opt.get("api_userpass") or options.get("userpass"),
+            )
         if isinstance(metadata, dict):
-            for key in ("modelspec.architecture", "modelspec.implementation", "ss_base_model_version"):
+            for key in (
+                "modelspec.architecture",
+                "modelspec.implementation",
+                "ss_base_model_version",
+            ):
                 model_type = infer_model_type(metadata.get(key))
                 if model_type:
                     evidence = f"metadata.{key}"
@@ -189,23 +304,95 @@ def resolve_context(yml, opt):
             evidence = "comfy_family"
     if ui == "neo" and model_type in ("sd2", "sd35"):
         raise ValueError(f"Forge Neo does not support {model_type}")
-    return {"ui_type": ui, "model_type": model_type, "checkpoint": checkpoint,
-            "evidence": evidence, "server": server}
+    checkpoint_entry = lookup_model(
+        server.get("models", []), checkpoint, required=False
+    )
+    return {
+        "ui_type": ui,
+        "model_type": model_type,
+        "checkpoint": checkpoint,
+        "checkpoint_entry": checkpoint_entry,
+        "evidence": evidence,
+        "server": server,
+    }
+
+
+def _checkpoint_profile_match(profiles, context):
+    """Return one exact checkpoint profile, or ``None`` when there is no match."""
+    if not profiles:
+        return None
+    if not isinstance(profiles, dict):
+        raise ValueError("checkpoint_profile must be a mapping")
+
+    exact = set()
+    basenames = set()
+    stems = set()
+    full, base, stem = _checkpoint_components(context.get("checkpoint"))
+    exact.update(full)
+    basenames.update(base)
+    stems.update(stem)
+    entry = context.get("checkpoint_entry")
+    if isinstance(entry, dict):
+        for key in ("title", "model_name", "filename", "hash", "sha256"):
+            full, base, stem = _checkpoint_components(entry.get(key))
+            exact.update(full)
+            basenames.update(base)
+            stems.update(stem)
+    if not exact and not basenames and not stems:
+        return None
+
+    matches = {0: [], 1: [], 2: []}
+    seen = set()
+    for name, profile in profiles.items():
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("checkpoint_profile keys must be non-empty strings")
+        key = frozenset(checkpoint_identifiers(name))
+        if not key:
+            raise ValueError(f"Invalid checkpoint_profile key: {name}")
+        if key in seen:
+            raise ValueError(f"Duplicate checkpoint_profile key: {name}")
+        seen.add(key)
+        full, base, stem = _checkpoint_components(name)
+        if full.intersection(exact):
+            matches[0].append((name, profile))
+        elif base.intersection(basenames):
+            matches[1].append((name, profile))
+        elif stem.intersection(stems):
+            matches[2].append((name, profile))
+    selected = next((items for items in matches.values() if items), [])
+    if len(selected) > 1:
+        names = ", ".join(name for name, _ in selected)
+        raise ValueError(
+            f"Ambiguous checkpoint_profile for {context.get('checkpoint')}: {names}"
+        )
+    return selected[0] if selected else None
 
 
 def apply_generation_profiles(yml, opt):
     """Called after the regular profile, before variables/methods are evaluated."""
     options = yml.get("options", {})
-    requested = any(k in yml for k in ("model_profile", "ui_profile")) or any(
+    requested = any(
+        k in yml for k in ("model_profile", "checkpoint_profile", "ui_profile")
+    ) or any(
         opt.get(k) is not None or options.get(k) is not None
-        for k in ("ui_type", "model_type", "image", "mask", "reference_images"))
+        for k in ("ui_type", "model_type", "image", "mask", "reference_images")
+    )
     # API execution needs backend detection even for an old YAML (e.g. Neo modules).
-    if not requested and not (opt.get("api_mode") or opt.get("comfy") or opt.get("api_comfy")):
+    if not requested and not (
+        opt.get("api_mode") or opt.get("comfy") or opt.get("api_comfy")
+    ):
         return None
     models = yml.get("model_profile") or {}
+    checkpoints = yml.get("checkpoint_profile") or {}
     uis = yml.get("ui_profile") or {}
-    if not isinstance(models, dict) or not isinstance(uis, dict):
-        raise ValueError("model_profile and ui_profile must be mappings")
+    if (
+        not isinstance(models, dict)
+        or not isinstance(checkpoints, dict)
+        or not isinstance(uis, dict)
+    ):
+        raise ValueError(
+            "model_profile, checkpoint_profile and ui_profile must be mappings"
+        )
     normalized = {}
     for name, value in models.items():
         key = normalize_model_type(name)
@@ -221,21 +408,35 @@ def apply_generation_profiles(yml, opt):
         if name in normalized:
             apply_profile(yml, normalized[name], f"model_profile.{name}")
             applied.append(f"model_profile.{name}")
+    checkpoint = _checkpoint_profile_match(checkpoints, context)
+    if checkpoint:
+        name, value = checkpoint
+        apply_profile(yml, value, f"checkpoint_profile.{name}")
+        applied.append(f"checkpoint_profile.{name}")
     ui = context["ui_type"]
     if ui in uis:
         apply_profile(yml, uis[ui], f"ui_profile.{ui}")
         applied.append(f"ui_profile.{ui}")
     if models and context["model_type"] is None:
-        Logger.warning("model_type unknown; skipping model_profile. Set --model-type to override.")
+        Logger.warning(
+            "model_type unknown; skipping model_profile. Set --model-type to override."
+        )
     elif context["evidence"] != "explicit" and any(
-            name != context["model_type"] and context["model_type"] in model_chain(name)
-            for name in normalized):
-        Logger.warning(f"Model subtype is not identified; applying {context['model_type']} ancestors only. "
-                       "Set --model-type to select a specific variant.")
+        name != context["model_type"] and context["model_type"] in model_chain(name)
+        for name in normalized
+    ):
+        Logger.warning(
+            f"Model subtype is not identified; applying {context['model_type']} ancestors only. "
+            "Set --model-type to select a specific variant."
+        )
     if uis and ui is None:
-        Logger.warning("ui_type unknown; skipping ui_profile. Set --ui-type to override.")
+        Logger.warning(
+            "ui_type unknown; skipping ui_profile. Set --ui-type to override."
+        )
     context["applied_profiles"] = applied
-    Logger.info(f"Generation context: ui={ui}, model={context['model_type']} "
-                f"({context['evidence']}), profiles={applied}")
+    Logger.info(
+        f"Generation context: ui={ui}, model={context['model_type']} "
+        f"({context['evidence']}), profiles={applied}"
+    )
     yml["_generation_context"] = context
     return context

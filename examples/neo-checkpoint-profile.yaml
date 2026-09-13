@@ -1,0 +1,38 @@
+version: 2
+
+# Forge Neo checkpoint-specific profile example.
+options:
+  output: null
+  ui_type: neo
+  model_type: anima
+  model: anima_aestheticV11.safetensors
+  image_type: png
+
+methods:
+  - random: 1
+
+command:
+  prompt: a red ceramic teapot on a wooden table, daylight
+  negative_prompt: blurry, low quality
+  seed: -1
+
+model_profile:
+  anima:
+    options:
+      vae: qwen_image_vae.safetensors
+      text_encoder: Qwen3-0.6B-Base.Q8_0.gguf
+    command:
+      width: 512
+      height: 512
+      steps: 24
+      cfg_scale: 4
+
+checkpoint_profile:
+  # Extension may be omitted; it matches anima_aestheticV11.safetensors.
+  anima_aestheticV11:
+    command:
+      sampler_name: Euler
+      scheduler: Normal
+
+ui_profile:
+  neo: {}
