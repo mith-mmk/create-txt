@@ -597,7 +597,11 @@ def dispatch_webui(args, payload, options, yml):
         models = context.get("server", {}).get("models") or get_json(
             args.api_base, "/sdapi/v1/sd-models", opt.get("userpass")
         )
-        selected = lookup_model(models, args.api_set_sd_model)["title"]
+        selected_model = lookup_model(models, args.api_set_sd_model)
+        if selected_model is None:
+            selected = args.api_set_sd_model
+        else:
+            selected = selected_model["title"]
         for item in payload:
             item.setdefault("override_settings", {})["sd_model_checkpoint"] = selected
     payload = prepare_payloads(payload, opt, args.api_type, context)
@@ -631,7 +635,12 @@ def dispatch_comfy(args, payload, options, yml, comfy_config):
     opt.update(
         {
             "sd_model": resolve_arg_or_options(
-                args, options, "api_set_sd_model", "model", "sd_model", "api_set_sd_model"
+                args,
+                options,
+                "api_set_sd_model",
+                "model",
+                "sd_model",
+                "api_set_sd_model",
             ),
             "sd_vae": resolve_arg_or_options(
                 args, options, "api_set_sd_vae", "vae", "sd_vae", "api_set_sd_vae"
