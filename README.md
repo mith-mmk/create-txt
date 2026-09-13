@@ -156,7 +156,8 @@ usage: cp2.py [-h] [--append-dir APPEND_DIR] [--output OUTPUT] [--json [JSON]] [
               [--max-number MAX_NUMBER] [--num-length NUM_LENGTH]
               [--api-filename-variable [API_FILENAME_VARIABLE]] [--json-verbose [JSON_VERBOSE]]
               [--num-once [NUM_ONCE]] [--api-set-sd-model API_SET_SD_MODEL]
-              [--api-set-sd-vae API_SET_SD_VAE] [--override [OVERRIDE ...]] [--info [INFO ...]]
+              [--api-set-sd-vae API_SET_SD_VAE] [--text-encoder TEXT_ENCODER]
+              [--override [OVERRIDE ...]] [--info [INFO ...]]
               [--save-extend-meta [SAVE_EXTEND_META]] [--image-type {jpg,png,webp}]
               [--image-quality IMAGE_QUALITY] [--api-type {txt2img,img2img,interrogate}]
               [--interrogate {clip,deepdanbooru}] [--model MODEL] [--alt-image-dir ALT_IMAGE_DIR]
@@ -218,6 +219,10 @@ The parser is still changing. For the exact current list, `python cp2.py --help`
   --api-set-sd-vae VAE_FILE
                         set vaefile(include extention). `Automatic` is valid for WebUI, but ComfyUI converts it to no explicit VAE override.
                         (VAEファイルを設定する。拡張子は省略できません。`Automatic` はWebUIでは有効ですが、ComfyUIではVAE未指定として扱います)
+
+  --text-encoder TEXT_ENCODER
+                        set Forge/Neo text encoder module; `Automatic` keeps the server default
+                        (Forge/Neoのテキストエンコーダーを設定する。`Automatic` はサーバー既定値を維持します)
 
   --override
                         command oveeride ex= "width=768, height=1024"(コマンドを上書きする 例: "width=768, height=1024")
@@ -601,7 +606,7 @@ ui_profile:
 | 共通キー | 派生キー |
 | --- | --- |
 | `sd15` | SD1.5 |
-| `sdxl` | `illustrius` → `noobai`、`mugen` |
+| `sdxl` | `illustrius` → `noobai`、`pony`、`mugen` |
 | `flux` | `flux-dev`, `flux-schnell`, `flux-krea`, `flux-kontext` |
 | `flux2-klein` | `flux2-klein-4b`, `flux2-klein-9b` |
 | `chroma` | `chroma-hd` |
@@ -640,8 +645,10 @@ Animaの各版には`-edit`付きのキーもあります。例えば
 同じスクリプトの`alwayson_scripts`指定と併用するとエラーです。
 従来の画像ファイル／ディレクトリを位置引数にしたimg2imgも使用できます。
 
-Neo/ForgeのVAE・テキストエンコーダーは`options.sd_vae`の配列またはカンマ区切り文字列、
-あるいは`command.override_settings.forge_additional_modules`で指定します。
+Neo/ForgeのVAEは`options.vae`、テキストエンコーダーは`options.text_encoder`で指定します。
+どちらも配列またはカンマ区切り文字列にできます。旧設定の`options.sd_vae`も
+下位互換のため使用できます。CLIでは`--api-set-sd-vae`と`--text-encoder`を使えます。
+また、`command.override_settings.forge_additional_modules`で追加モジュールを直接指定できます。
 一覧APIで名前を解決し、不明・曖昧な名前はエラーにします。
 `Automatic`・未指定は現在の追加モジュールを維持し、空配列`[]`は明示的に解除します。
 `command.override_settings`なら`override_settings_restore_afterwards: true`で復元できます。
@@ -669,6 +676,21 @@ python cp2.py examples/neo-edit.yaml --api-mode --reference-image first.png --re
 runnerの各profileにも`model_type`・`ui_type`・`image`・`mask`・`reference_images`を
 指定できます。img2imgのYAMLはrunner profileの`input`で指定します。
 生成APIの失敗、画像ゼロ、保存失敗は成功として返しません。
+
+インストール済みチェックポイントの切替確認には
+[examples/test_model_switch.py](examples/test_model_switch.py) と
+[examples/test-model-switch.ps1](examples/test-model-switch.ps1) を使えます。
+モデル名は環境ごとに異なるため、各チェックポイントを明示してください。
+
+```powershell
+pwsh ./examples/test-model-switch.ps1 `
+  -AnimaModel "anima_2b.safetensors" `
+  -IllustriousModel "illustrious.safetensors" `
+  -PonyModel "pony.safetensors" -DryRun
+```
+`-DryRun`を外すと各モデルを順番に切り替えます。`-Generate`を追加すると
+切替後に各モデルで1枚のt2iも実行します。テスト環境が使用中の場合はDryRunで
+引数と順序だけ確認できます。
 
 
 ## Parser(パーサー)

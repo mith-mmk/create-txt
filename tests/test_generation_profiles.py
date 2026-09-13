@@ -76,8 +76,26 @@ def test_profiles_deep_copy_and_single_resolution():
     assert patch == original
 
 
+def test_model_profile_options_include_modules():
+    yml = {
+        "options": {"model_type": "noobai"},
+        "model_profile": {
+            "sdxl": {"options": {"vae": "base-vae"}},
+            "illustrius": {"options": {"text_encoder": "clip-l"}},
+            "noobai": {"options": {"vae": "noobai-vae"}},
+        },
+    }
+    context = apply_generation_profiles(yml, {})
+    assert context["applied_profiles"] == [
+        "model_profile.sdxl", "model_profile.illustrius", "model_profile.noobai"
+    ]
+    assert yml["options"]["vae"] == "noobai-vae"
+    assert yml["options"]["text_encoder"] == "clip-l"
+
+
 @pytest.mark.parametrize(("name", "expected"), [
     (r"models\NoobAI-XL-v1.safetensors", "noobai"),
+    (r"models\Pony-v6.safetensors", "pony"),
     ("waiIllustriousSDXL_v170", "illustrius"), ("sd_xl_base_1.0", "sdxl"),
     ("anima_2.9b_fp8", "anima_2.9b"), ("Anima-3.8B", "anima_3.8b"),
     ("anima/Asuma_Anima_V1", "anima"), ("anima_2b-edit", "anima_2b-edit"),
@@ -92,6 +110,10 @@ def test_model_names(name, expected):
     assert infer_model_type(name) == expected
 
 
+def test_pony_inherits_sdxl():
+    assert model_chain("pony") == ["sdxl", "pony"]
+
+
 def test_explicit_checkpoint_over_current_and_metadata(monkeypatch):
     monkeypatch.setattr(webui, "inspect_server", lambda *a: {
         "ui_type": "neo", "options": {"sd_model_checkpoint": "anima_2b"},
@@ -102,6 +124,9 @@ def test_explicit_checkpoint_over_current_and_metadata(monkeypatch):
     context = resolve_context({"options": {"model_type": "sdxl"}},
                               {"api_mode": True, "model_type": "anima_3.8b"})
     assert context["model_type"] == "anima_3.8b"
+    context = resolve_context({"options": {"model": "pony-v6.safetensors"}}, {})
+    assert context["checkpoint"] == "pony-v6.safetensors"
+    assert context["model_type"] == "pony"
 
 
 def test_failed_connection_not_webui(monkeypatch):

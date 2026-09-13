@@ -11,6 +11,38 @@ def test_explicit_parser_default_overrides_yaml():
     assert cp2.build_webui_config(args, {"sd_vae": ["vae"]}, {})["sd_vae"] == "Automatic"
 
 
+def test_text_encoder_default_and_yaml_cli_precedence():
+    parser = cp2.build_parser()
+    args = parser.parse_args(["input.yaml"])
+    assert args.text_encoder == "Automatic"
+    config = cp2.build_webui_config(
+        args, {"vae": "neo-vae", "text_encoder": "qwen-encoder"}, {}
+    )
+    assert config["vae"] == "neo-vae"
+    assert config["sd_vae"] == "neo-vae"
+    assert config["text_encoder"] == "qwen-encoder"
+
+    args = parser.parse_args(
+        ["--api-set-sd-vae", "cli-vae", "--text-encoder", "cli-encoder", "input.yaml"]
+    )
+    config = cp2.build_webui_config(
+        args, {"vae": "yaml-vae", "text_encoder": "yaml-encoder"}, {}
+    )
+    assert config["vae"] == "cli-vae"
+    assert config["text_encoder"] == "cli-encoder"
+    assert config["text_encoder_explicit"] is True
+    assert config["modules_explicit"] is True
+
+    args = parser.parse_args(["input.yaml"])
+    config = cp2.build_webui_config(
+        args, {"vae": "canonical", "sd_vae": "legacy"}, {}
+    )
+    assert config["vae"] == "canonical"
+
+    config = cp2.build_webui_config(args, {"model": "canonical-model"}, {})
+    assert config["sd_model"] == "canonical-model"
+
+
 def test_normalize_comfy_args_from_legacy_flags():
     parser = cp2.build_parser()
     args = parser.parse_args(["--api-comfy", "--api-type", "img2img", "--mask-dirs", "mask.png"])

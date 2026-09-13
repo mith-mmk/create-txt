@@ -35,7 +35,11 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
         import cp2
         args = _build_cp2_namespace(profile, host, context)
         args.api_type = "img2img"
-        args.api_set_sd_model = profile.get("model")
+        raw_options = profile.get("options", {})
+        options = raw_options if isinstance(raw_options, dict) else {}
+        args.api_set_sd_model = profile.get("model") or options.get(
+            "model", options.get("sd_model")
+        )
         if dry_run:
             return True
         return bool(cp2.main(args))
@@ -72,7 +76,14 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
     if "denosing_stringth" in profile and "denoising_strength" not in overrides:
         overrides["denoising_strength"] = profile["denosing_stringth"]
 
-    opt: dict = dict(profile.get("options", {}))
+    raw_options = profile.get("options", {})
+    opt: dict = dict(raw_options) if isinstance(raw_options, dict) else {}
+    if "vae" in opt:
+        opt["sd_vae"] = opt["vae"]
+    else:
+        opt.setdefault("sd_vae", profile.get("vae", "Automatic"))
+    opt.setdefault("text_encoder", profile.get("text_encoder", "Automatic"))
+    opt.setdefault("sd_model", profile.get("model", opt.get("model", opt.get("sd_model"))))
     opt["work_dir"] = work_dir
     opt["ended_dir"] = ended_dir
     opt["folder_suffix"] = profile.get("folder_suffix", "-images")

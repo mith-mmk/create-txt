@@ -99,16 +99,44 @@ def resolve_modules(available, selected):
     return result
 
 
-def configure_model(sd_model, base_url, sd_vae="Automatic", userpass=None):
+def _automatic_module(value):
+    return value is None or (
+        isinstance(value, str) and value.casefold() in {"automatic", "none"}
+    )
+
+
+def _module_list(value):
+    if _automatic_module(value):
+        return []
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    raise ValueError("Module selection must be a list or comma-separated string")
+
+
+def _selected_modules(vae, text_encoder):
+    """Return modules requested by the VAE and text encoder options."""
+    values = _module_list(vae) + _module_list(text_encoder)
+    explicitly_empty = vae == [] or text_encoder == []
+    return values, explicitly_empty
+
+
+def configure_model(
+    sd_model, base_url, sd_vae="Automatic", userpass=None, text_encoder="Automatic"
+):
     settings = get_json(base_url, "/sdapi/v1/options", userpass)
     models = get_json(base_url, "/sdapi/v1/sd-models", userpass)
     model = lookup_model(models, sd_model)
     payload = {"sd_model_checkpoint": model["title"]}
     if "forge_additional_modules" in settings:
         # Automatic/omitted means retain current modules, [] explicitly clears them.
-        if sd_vae is not None and sd_vae not in ("Automatic", "None"):
+        modules, explicitly_empty = _selected_modules(sd_vae, text_encoder)
+        if modules or explicitly_empty:
             available = get_json(base_url, "/sdapi/v1/sd-modules", userpass)
-            payload["forge_additional_modules"] = resolve_modules(available, sd_vae)
+            payload["forge_additional_modules"] = resolve_modules(available, modules)
+    elif not _automatic_module(text_encoder):
+        raise ValueError("text_encoder requires Forge or Forge Neo")
     elif sd_vae is not None:
         payload["sd_vae"] = sd_vae
     if all(settings.get(k) == v for k, v in payload.items()):
@@ -204,16 +232,31 @@ def prepare_payloads(payloads, opt, mode, context=None):
             if not available_models:
                 available_models = get_json(base_url, "/sdapi/v1/sd-models", userpass)
             overrides["sd_model_checkpoint"] = lookup_model(available_models, selected_model)["title"]
-        vae = opt.get("sd_vae")
+        # ``vae`` is the canonical YAML key; keep ``sd_vae`` as a legacy alias.
+        vae = opt["vae"] if "vae" in opt else opt.get("sd_vae")
+        text_encoder = opt.get("text_encoder", "Automatic")
+        if ui not in ("neo", "forge") and not _automatic_module(text_encoder):
+            raise ValueError("text_encoder requires Forge or Forge Neo")
         module_key = "forge_additional_modules" if ui in ("neo", "forge") else "sd_vae"
-        if opt.get("modules_explicit"):
+        vae_explicit = bool(opt.get("vae_explicit", opt.get("modules_explicit")))
+        encoder_explicit = bool(opt.get("text_encoder_explicit"))
+        selected_modules, explicitly_empty = _selected_modules(vae, text_encoder)
+        if vae_explicit:
             overrides.pop("sd_vae", None)
             overrides.pop("forge_additional_modules", None)
-            if ui not in ("neo", "forge") or (vae is not None and vae not in ("Automatic", "None")):
-                overrides[module_key] = vae
-        elif vae is not None and vae not in ("Automatic", "None"):
+            if ui not in ("neo", "forge"):
+                if not _automatic_module(vae):
+                    overrides[module_key] = vae
+            elif selected_modules or explicitly_empty:
+                overrides[module_key] = selected_modules
+        elif encoder_explicit and not _automatic_module(text_encoder):
+            # An explicit encoder augments a YAML VAE selection and preserves
+            # command-level modules when possible.
+            current = overrides.get("forge_additional_modules", overrides.get("sd_vae", []))
+            overrides[module_key] = _module_list(current) + _module_list(text_encoder)
+        elif selected_modules or explicitly_empty:
             if "sd_vae" not in overrides and "forge_additional_modules" not in overrides:
-                overrides[module_key] = vae
+                overrides[module_key] = selected_modules
         if ui in ("neo", "forge"):
             modules = overrides.pop("sd_vae", None)
             modules = overrides.get("forge_additional_modules", modules)

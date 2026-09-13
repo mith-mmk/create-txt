@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import modules.api as api
 import modules.logger as logger
@@ -36,7 +36,9 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
 
     # --- モデル選択 ---
     model_source = profile.get("models") or profile.get("models_file")
-    model = profile.get("model")
+    raw_profile_options = profile.get("options", {})
+    profile_options = raw_profile_options if isinstance(raw_profile_options, dict) else {}
+    model = profile.get("model") or profile_options.get("model", profile_options.get("sd_model"))
     if model_source and profile.get("random_model", True):
         abort_matrix = context.config.get("abort_matrix") or profile.get("abort_matrix")
         genre = profile.get("genre") or context.get_var("genre")
@@ -74,13 +76,17 @@ def run(profile_name: str, context: "RunnerContext") -> bool:
 
 
 def _build_cp2_namespace(
-    profile: dict, host: str, context: "RunnerContext"
+    profile: dict[str, Any], host: str, context: "RunnerContext"
 ) -> argparse.Namespace:
     """
     cp2.py の argparse 引数に相当する Namespace を辞書から組み立てる。
     profile キーと cp2 引数名の対応を吸収する。
     """
     opt_map = profile.get("options", {})
+    if not isinstance(opt_map, dict):
+        opt_map = {}
+    vae = opt_map.get("vae", opt_map.get("sd_vae", profile.get("vae", "Automatic")))
+    text_encoder = opt_map.get("text_encoder", profile.get("text_encoder", "Automatic"))
 
     return argparse.Namespace(
         input=profile.get("input"),
@@ -92,7 +98,8 @@ def _build_cp2_namespace(
         or profile.get("filename_pattern"),
         max_number=profile.get("number", -1),
         api_set_sd_model=None,  # run() supplies the selected model before profile resolution.
-        api_set_sd_vae=profile.get("vae", "Automatic"),
+        api_set_sd_vae=vae,
+        text_encoder=text_encoder,
         model_type=profile.get("model_type") or opt_map.get("model_type"),
         ui_type=profile.get("ui_type") or opt_map.get("ui_type"),
         image=profile.get("image") or opt_map.get("image"),

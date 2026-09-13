@@ -10,6 +10,7 @@ Logger = getDefaultLogger()
 # Parent order is also the order in which configuration is applied.
 MODEL_PARENTS = {
     "sd15": None, "sdxl": None, "illustrius": "sdxl", "noobai": "illustrius",
+    "pony": "sdxl",
     "mugen": "sdxl", "flux": None, "flux-dev": "flux", "flux-schnell": "flux",
     "flux-krea": "flux", "flux-kontext": "flux", "flux2-klein": None,
     "flux2-klein-4b": "flux2-klein", "flux2-klein-9b": "flux2-klein",
@@ -69,6 +70,8 @@ def infer_model_type(name):
     compact = re.sub(r"[\s_.-]", "", name)
     if "noobai" in compact:
         return "noobai"
+    if "pony" in compact:
+        return "pony"
     if "illustri" in compact:
         return "illustrius"
     if "anima" in name and "animagine" not in name:
@@ -153,7 +156,8 @@ def resolve_context(yml, opt):
         raise ValueError("ComfyUI flags conflict with ui_type")
     model_type = normalize_model_type(opt.get("model_type") or options.get("model_type"))
     command = yml.get("command", {})
-    checkpoint = (opt.get("api_set_sd_model") or options.get("sd_model") or
+    checkpoint = (opt.get("api_set_sd_model") or options.get("model") or
+                  options.get("sd_model") or
                   (command.get("override_settings", {}).get("sd_model_checkpoint")
                    if isinstance(command, dict) else None))
     server = {}

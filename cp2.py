@@ -73,11 +73,7 @@ def parse_comfy_node_arg(value):
 
 def merge_nested_dict(target, patch):
     for key, value in patch.items():
-        if (
-            key in target
-            and isinstance(target[key], dict)
-            and isinstance(value, dict)
-        ):
+        if key in target and isinstance(target[key], dict) and isinstance(value, dict):
             merge_nested_dict(target[key], value)
         else:
             target[key] = value
@@ -90,7 +86,8 @@ class PromptArgumentParser(argparse.ArgumentParser):
         result, rest = super().parse_known_args(tokens, namespace)
         result._explicit_args = {
             self._option_string_actions[token.split("=", 1)[0]].dest
-            for token in tokens if token.split("=", 1)[0] in self._option_string_actions
+            for token in tokens
+            if token.split("=", 1)[0] in self._option_string_actions
         }
         for token in tokens:
             if token.startswith("-") and not token.startswith("--") and len(token) > 2:
@@ -135,6 +132,7 @@ def build_parser():
     parser.add_argument("--num-once", type=bool, nargs="?", const=True, default=False)
     parser.add_argument("--api-set-sd-model", "-C", type=str, default=None)
     parser.add_argument("--api-set-sd-vae", "-V", type=str, default="Automatic")
+    parser.add_argument("--text-encoder", type=str, default="Automatic")
     parser.add_argument("--override", type=str, nargs="*", default=None)
     parser.add_argument("--info", type=str, nargs="*", default=None)
     parser.add_argument(
@@ -170,10 +168,14 @@ def build_parser():
     )
     parser.add_argument("--profile", "-p", type=str, default=None)
     parser.add_argument("--model-type", default=None)
-    parser.add_argument("--ui-type", choices=["webui", "forge", "neo", "comfy"], default=None)
+    parser.add_argument(
+        "--ui-type", choices=["webui", "forge", "neo", "comfy"], default=None
+    )
     parser.add_argument("--image", default=None)
     parser.add_argument("--mask", default=None)
-    parser.add_argument("--reference-image", action="append", dest="reference_images", default=None)
+    parser.add_argument(
+        "--reference-image", action="append", dest="reference_images", default=None
+    )
     parser.add_argument("--values", "-v", type=str, default=None)
     parser.add_argument(
         "--api-comfy-save",
@@ -213,8 +215,12 @@ def build_parser():
     parser.add_argument(
         "--comfy-controlnet", action="append", default=None, dest="comfy_controlnet"
     )
-    parser.add_argument("--comfy-lora", action="append", default=None, dest="comfy_lora")
-    parser.add_argument("--comfy-node", action="append", default=None, dest="comfy_node")
+    parser.add_argument(
+        "--comfy-lora", action="append", default=None, dest="comfy_lora"
+    )
+    parser.add_argument(
+        "--comfy-node", action="append", default=None, dest="comfy_node"
+    )
     return parser
 
 
@@ -240,6 +246,14 @@ def resolve_arg_or_option(args, options, dest, option_key=None):
     if option_value is not None:
         return option_value
     return value
+
+
+def resolve_arg_or_options(args, options, dest, *option_keys):
+    """Resolve one argument against canonical and legacy YAML option names."""
+    if not option_keys:
+        option_keys = (dest,)
+    selected_key = next((key for key in option_keys if key in options), option_keys[0])
+    return resolve_arg_or_option(args, options, dest, selected_key)
 
 
 def apply_logging_options(args):
@@ -269,15 +283,13 @@ def _resolve_save_image(comfy_save):
 
 def resolve_filename_pattern(args, options):
     defaults = get_parser_defaults()
-    if (
-        getattr(args, "api_filename_pattern", None) is not None
-        and args.api_filename_pattern != defaults.get("api_filename_pattern")
-    ):
+    if getattr(
+        args, "api_filename_pattern", None
+    ) is not None and args.api_filename_pattern != defaults.get("api_filename_pattern"):
         return args.api_filename_pattern
-    if (
-        getattr(args, "api_filname_pattern", None) is not None
-        and args.api_filname_pattern != defaults.get("api_filname_pattern")
-    ):
+    if getattr(
+        args, "api_filname_pattern", None
+    ) is not None and args.api_filname_pattern != defaults.get("api_filname_pattern"):
         return args.api_filname_pattern
     return options.get("filename_pattern")
 
@@ -385,8 +397,12 @@ def _serialize_output_text(output_text, options, args):
 
 def build_or_load_payload(args):
     # Legacy image/directory input is handled by the img2img path, not the YAML reader.
-    if (args.api_mode and args.api_type == "img2img" and args.input and
-            os.path.splitext(args.input)[1].lower() not in (".yaml", ".yml")):
+    if (
+        args.api_mode
+        and args.api_type == "img2img"
+        and args.input
+        and os.path.splitext(args.input)[1].lower() not in (".yaml", ".yml")
+    ):
         return {"options": {}, "yml": {}, "output_text": [], "serialized_output": ""}
     if args.input is not None:
         opt = vars(args)
@@ -443,19 +459,36 @@ def build_webui_config(args, options, yml):
         opt["command"] = yml["command"]
     if "info" in yml:
         opt["info"] = yml["info"]
-    opt["sd_model"] = resolve_arg_or_option(args, options, "api_set_sd_model", "sd_model")
-    opt["sd_vae"] = resolve_arg_or_option(args, options, "api_set_sd_vae", "sd_vae")
+    opt["sd_model"] = resolve_arg_or_options(
+        args, options, "api_set_sd_model", "model", "sd_model", "api_set_sd_model"
+    )
+    opt["sd_vae"] = resolve_arg_or_options(
+        args, options, "api_set_sd_vae", "vae", "sd_vae", "api_set_sd_vae"
+    )
+    opt["vae"] = opt["sd_vae"]
+    opt["text_encoder"] = resolve_arg_or_option(args, options, "text_encoder")
     opt["base_url"] = args.api_base
     opt["cn_images_dir"] = args.cn_images_dir
     opt["cn_save_pre"] = args.cn_save_pre
-    for key in ("ui_type", "model_type", "image", "mask", "reference_images", "reference_max_size"):
+    for key in (
+        "ui_type",
+        "model_type",
+        "image",
+        "mask",
+        "reference_images",
+        "reference_max_size",
+    ):
         value = getattr(args, key, None)
         if value is None:
             value = options.get(key)
         if value is not None:
             opt[key] = value
     opt["generation_context"] = yml.get("_generation_context", {})
-    opt["modules_explicit"] = "api_set_sd_vae" in getattr(args, "_explicit_args", set())
+    explicit_args = getattr(args, "_explicit_args", set())
+    opt["vae_explicit"] = "api_set_sd_vae" in explicit_args
+    opt["text_encoder_explicit"] = "text_encoder" in explicit_args
+    # Keep the old aggregate flag for integrations that use it directly.
+    opt["modules_explicit"] = opt["vae_explicit"] or opt["text_encoder_explicit"]
     return opt
 
 
@@ -518,11 +551,14 @@ def dispatch_webui_img2img(args):
     sd_model = img_opt.get("sd_model")
     sd_vae = img_opt.get("sd_vae")
     if sd_model is not None:
-        api.set_sd_model(
-            base_url=args.api_base,
-            sd_model=sd_model,
-            sd_vae=sd_vae,
-        )
+        set_model_options = {
+            "base_url": args.api_base,
+            "sd_model": sd_model,
+            "sd_vae": sd_vae,
+        }
+        if img_opt.get("text_encoder") not in (None, "Automatic", "None"):
+            set_model_options["text_encoder"] = img_opt["text_encoder"]
+        api.set_sd_model(**set_model_options)
     img_opt["alt_image_dir"] = args.alt_image_dir
     img_opt["interrogate"] = args.interrogate
     img_opt["verbose"] = args.verbose
@@ -534,7 +570,11 @@ def dispatch_webui_img2img(args):
         output_dir=output_dir,
         opt=img_opt,
     )
-    return result if isinstance(result, bool) else bool(result) and all(r.get("success") for r in result)
+    return (
+        result
+        if isinstance(result, bool)
+        else bool(result) and all(r.get("success") for r in result)
+    )
 
 
 def dispatch_webui(args, payload, options, yml):
@@ -546,14 +586,17 @@ def dispatch_webui(args, payload, options, yml):
     opt = build_webui_config(args, options, yml)
     from modules.generation_profile import resolve_context
     from modules.webui import prepare_payloads
+
     context = yml.get("_generation_context") or resolve_context(yml, vars(args))
     opt["generation_context"] = context
     opt["ui_type"] = context.get("ui_type")
     payload = copy.deepcopy(payload)
     if args.api_set_sd_model:
         from modules.webui import get_json, lookup_model
+
         models = context.get("server", {}).get("models") or get_json(
-            args.api_base, "/sdapi/v1/sd-models", opt.get("userpass"))
+            args.api_base, "/sdapi/v1/sd-models", opt.get("userpass")
+        )
         selected = lookup_model(models, args.api_set_sd_model)["title"]
         for item in payload:
             item.setdefault("override_settings", {})["sd_model_checkpoint"] = selected
@@ -561,8 +604,15 @@ def dispatch_webui(args, payload, options, yml):
     sd_model = opt.get("sd_model")
     sd_vae = opt.get("sd_vae")
     if sd_model is not None:
-        api.set_sd_model(base_url=args.api_base, sd_model=sd_model, sd_vae=sd_vae,
-                         userpass=opt.get("userpass"))
+        set_model_options = {
+            "base_url": args.api_base,
+            "sd_model": sd_model,
+            "sd_vae": sd_vae,
+            "userpass": opt.get("userpass"),
+        }
+        if opt.get("text_encoder") not in (None, "Automatic", "None"):
+            set_model_options["text_encoder"] = opt["text_encoder"]
+        api.set_sd_model(**set_model_options)
     opt["api_type"] = args.api_type
     result = txt2img(
         payload, base_url=args.api_base, output_dir=args.api_output_dir, opt=opt
@@ -580,16 +630,25 @@ def dispatch_comfy(args, payload, options, yml, comfy_config):
     opt = build_common_save_options(args, options)
     opt.update(
         {
-        "sd_model": resolve_arg_or_option(args, options, "api_set_sd_model", "sd_model"),
-        "sd_vae": resolve_arg_or_option(args, options, "api_set_sd_vae", "sd_vae"),
-        "save_image": save_image,
-        "workflow_family": comfy_config.get("family"),
-        "workflow_mode": comfy_config.get("mode"),
-        "workflow_template": comfy_config.get("template"),
+            "sd_model": resolve_arg_or_options(
+                args, options, "api_set_sd_model", "model", "sd_model", "api_set_sd_model"
+            ),
+            "sd_vae": resolve_arg_or_options(
+                args, options, "api_set_sd_vae", "vae", "sd_vae", "api_set_sd_vae"
+            ),
+            "vae": resolve_arg_or_options(
+                args, options, "api_set_sd_vae", "vae", "sd_vae", "api_set_sd_vae"
+            ),
+            "text_encoder": resolve_arg_or_option(args, options, "text_encoder"),
+            "save_image": save_image,
+            "workflow_family": comfy_config.get("family"),
+            "workflow_mode": comfy_config.get("mode"),
+            "workflow_template": comfy_config.get("template"),
         }
     )
     if opt["sd_vae"] == "Automatic":
         opt["sd_vae"] = None
+        opt["vae"] = None
     for key in ("image", "mask"):
         value = getattr(args, key, None) or options.get(key)
         if value is not None:
@@ -597,7 +656,9 @@ def dispatch_comfy(args, payload, options, yml, comfy_config):
     if opt.get("image") and not args.comfy_mode:
         opt["workflow_mode"] = "img2img"
     if args.reference_images or options.get("reference_images"):
-        raise ValueError("reference_images requires Forge Neo; use a ComfyUI template for reference inputs")
+        raise ValueError(
+            "reference_images requires Forge Neo; use a ComfyUI template for reference inputs"
+        )
     if comfy_config.get("image") is not None:
         opt["image"] = comfy_config["image"]
     if comfy_config.get("mask") is not None:
@@ -636,6 +697,7 @@ def main(args):
     defaults.update(supplied)
     args = argparse.Namespace(**defaults)
     from modules.generation_profile import normalize_model_type
+
     normalize_model_type(args.model_type)
     if (args.comfy or args.api_comfy) and args.ui_type not in (None, "comfy"):
         raise ValueError("ComfyUI flags conflict with ui_type")
@@ -661,7 +723,8 @@ def run_from_args(command_args=None):
     apply_logging_options(args)
 
     if args.input is None and not (
-        (args.api_mode or args.api_comfy or args.comfy) and args.api_input_json is not None
+        (args.api_mode or args.api_comfy or args.comfy)
+        and args.api_input_json is not None
     ):
         parser.print_help()
         Logger.info("need [input] or api/comfy input json")

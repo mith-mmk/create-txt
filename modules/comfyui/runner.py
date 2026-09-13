@@ -262,8 +262,8 @@ class ComufyClient:
     ):
         try:
             options = options or {}
-            sd_model = options.get("sd_model", None)
-            vae = options.get("sd_vae", vae)
+            sd_model = options.get("model", options.get("sd_model"))
+            vae = options.get("vae", options.get("sd_vae", vae))
             wf = ComfyUIWorkflow()
             wf.setModel(sd_model)
             wf.setVAE(vae)

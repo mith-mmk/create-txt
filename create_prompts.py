@@ -23,6 +23,8 @@ def img2img_from_args(args):
     opt = {}
     opt["sd_model"] = args.api_set_sd_model
     opt["sd_vae"] = args.api_set_sd_vae
+    opt["vae"] = args.api_set_sd_vae
+    opt["text_encoder"] = args.text_encoder
     items = [
         "denoising_strength",
         "seed",
@@ -49,8 +51,7 @@ def img2img_from_args(args):
         for item in items:
             if overrides_arg.get(item):
                 overrides[item] = overrides_arg[item]
-    if type(args.input) is str:
-        filenames = [args.input]
+    filenames = [args.input] if isinstance(args.input, str) else []
     base_url = args.api_base
     output_dir = args.api_output_dir or "./outputs"
     dicted_args = vars(args)
@@ -69,12 +70,15 @@ def img2img_from_args(args):
         Logger.error("no exit files")
         return False
 
-    if dicted_args.get("sd_model") is not None:
-        api.set_sd_model(
-            dicted_args.get("sd_model"),
-            base_url=base_url,
-            sd_vae=dicted_args.get("sd_vae"),
-        )
+    if args.api_set_sd_model is not None:
+        model_args = {
+            "base_url": base_url,
+            "sd_model": args.api_set_sd_model,
+            "sd_vae": args.api_set_sd_vae,
+        }
+        if args.text_encoder not in (None, "Automatic", "None"):
+            model_args["text_encoder"] = args.text_encoder
+        api.set_sd_model(**model_args)
 
     opt = {}
 
@@ -91,6 +95,10 @@ def img2img_from_args(args):
     for key in opt_keys:
         if dicted_args.get(key) is not None:
             opt[key] = dicted_args.get(key)
+    opt["sd_model"] = args.api_set_sd_model
+    opt["sd_vae"] = args.api_set_sd_vae
+    opt["vae"] = args.api_set_sd_vae
+    opt["text_encoder"] = args.text_encoder
 
     try:
         img2img(
@@ -190,13 +198,27 @@ def main(args):
         opt["info"] = yml["info"]
 
     if args.api_mode:
-        sd_model = args.api_set_sd_model or options.get("sd_model")
-        sd_vae = args.api_set_sd_vae or options.get("sd_vae", "Automatic")
+        sd_model = args.api_set_sd_model or options.get(
+            "model", options.get("sd_model")
+        )
+        sd_vae = (
+            args.api_set_sd_vae
+            if args.api_set_sd_vae != "Automatic"
+            else options.get("vae", options.get("sd_vae", "Automatic"))
+        )
+        text_encoder = options.get("text_encoder", "Automatic")
+        if args.text_encoder != "Automatic":
+            text_encoder = args.text_encoder
         opt["sd_model"] = sd_model
         opt["sd_vae"] = sd_vae
+        opt["vae"] = sd_vae
+        opt["text_encoder"] = text_encoder
         opt["base_url"] = args.api_base
         if sd_model is not None:
-            api.set_sd_model(base_url=args.api_base, sd_model=sd_model, sd_vae=sd_vae)
+            model_args = {"base_url": args.api_base, "sd_model": sd_model, "sd_vae": sd_vae}
+            if text_encoder not in (None, "Automatic", "None"):
+                model_args["text_encoder"] = text_encoder
+            api.set_sd_model(**model_args)
         # api.init()
         Logger.verbose("api mode")
         Logger.verbose(f"base_url: {args.api_base} output_dir: {args.api_output_dir}")
@@ -320,6 +342,12 @@ def run_from_args(command_args=None):
         type=str,
         default="Automatic",
         help='Change sd vae "[Filename]" e.g. "Anything-V3.0.vae.pt", None is not using VAE',
+    )
+    parser.add_argument(
+        "--text-encoder",
+        type=str,
+        default="Automatic",
+        help='Change Forge/Neo text encoder module; Automatic keeps the server default',
     )
 
     #    --command_override="width=768, height=1024,"....

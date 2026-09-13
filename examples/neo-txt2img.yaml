@@ -4,7 +4,8 @@ options:
   ui_type: neo
   model_type: anima
   # Uses the currently selected Anima checkpoint and its modules.
-  # Set sd_model / sd_vae or use --api-set-sd-model / --api-set-sd-vae to change them.
+  # Set sd_model / vae / text_encoder or use the corresponding CLI options.
+  # sd_vae remains accepted as a legacy alias for vae.
   image_type: png
 methods:
   - random: 1

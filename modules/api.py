@@ -499,11 +499,15 @@ def get_modules(base_url="http://127.0.0.1:7860", modules=[], userpass=None):
 
 
 def set_sd_model(
-    sd_model, base_url="http://127.0.0.1:7860", sd_vae="Automatic", userpass=None
+    sd_model,
+    base_url="http://127.0.0.1:7860",
+    sd_vae="Automatic",
+    userpass=None,
+    text_encoder="Automatic",
 ):
     from modules.webui import configure_model
 
-    return configure_model(sd_model, base_url, sd_vae, userpass)
+    return configure_model(sd_model, base_url, sd_vae, userpass, text_encoder)
 
 
 def refresh(

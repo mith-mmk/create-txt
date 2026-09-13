@@ -174,6 +174,10 @@ def _build_cp2_namespace(
     ComfyUI 用なので api_comfy=True, api_mode=False。
     """
     opt_map = profile.get("options", {})
+    if not isinstance(opt_map, dict):
+        opt_map = {}
+    vae = opt_map.get("vae", opt_map.get("sd_vae", profile.get("vae", "Automatic")))
+    text_encoder = opt_map.get("text_encoder", profile.get("text_encoder", "Automatic"))
 
     # extra_args の key=value を values に追加
     extra_values: dict = {}
@@ -220,8 +224,9 @@ def _build_cp2_namespace(
         save_extend_meta=profile.get("save_extend_meta", False),
         escape_filename=profile.get("escape_filename", False),
         # モデル（モデル切り替えは呼び出し元で設定済みのため None）
-        api_set_sd_model=profile.get("model"),
-        api_set_sd_vae=profile.get("vae", "Automatic"),
+        api_set_sd_model=profile.get("model") or opt_map.get("model", opt_map.get("sd_model")),
+        api_set_sd_vae=vae,
+        text_encoder=text_encoder,
         model_type=profile.get("model_type") or opt_map.get("model_type"),
         ui_type=profile.get("ui_type") or opt_map.get("ui_type", "comfy"),
         # ControlNet

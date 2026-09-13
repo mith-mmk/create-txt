@@ -214,7 +214,7 @@ def unload_model(host: str, server_type: str = "") -> bool:
 def watch_files(
     path: str,
     pattern: str = "*",
-    callback: Callable[[str], None] = None,
+    callback: Callable[[str], None] | None = None,
     interval: float = 2.0,
     timeout: float = 0,
 ) -> list[str]:

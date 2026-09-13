@@ -110,6 +110,80 @@ def test_modules_option_without_checkpoint_and_explicit_automatic(monkeypatch):
     assert "override_settings" not in item
 
 
+def test_vae_and_text_encoder_modules_are_combined(monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
+        {"model_name": "vae.safetensors", "filename": "/modules/vae.safetensors"},
+        {"model_name": "encoder.safetensors", "filename": "/modules/encoder.safetensors"},
+    ])
+    item = webui.prepare_payloads(
+        [{}],
+        {"vae": "vae.safetensors", "text_encoder": "encoder.safetensors"},
+        "txt2img",
+        context(),
+    )[0]
+    assert item["override_settings"]["forge_additional_modules"] == [
+        "/modules/vae.safetensors", "/modules/encoder.safetensors"
+    ]
+
+
+def test_canonical_vae_wins_over_legacy_alias(monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
+        {"model_name": "canonical", "filename": "/modules/canonical.safetensors"}
+    ])
+    item = webui.prepare_payloads(
+        [{}], {"vae": "canonical", "sd_vae": "legacy"}, "txt2img", context()
+    )[0]
+    assert item["override_settings"]["forge_additional_modules"] == [
+        "/modules/canonical.safetensors"
+    ]
+
+
+def test_automatic_text_encoder_does_not_clear_modules(monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *args, **kwargs: [
+        {"model_name": "existing", "filename": "/modules/existing.safetensors"}
+    ])
+    item = webui.prepare_payloads(
+        [{"override_settings": {"forge_additional_modules": ["existing"]}}],
+        {"vae": "Automatic", "text_encoder": "Automatic"},
+        "txt2img",
+        context(),
+    )[0]
+    assert item["override_settings"]["forge_additional_modules"] == [
+        "/modules/existing.safetensors"
+    ]
+
+
+def test_plain_webui_rejects_explicit_text_encoder():
+    with pytest.raises(ValueError, match="requires Forge"):
+        webui.prepare_payloads(
+            [{}], {"text_encoder": "clip.safetensors"}, "txt2img",
+            {"ui_type": "webui", "model_type": "sdxl", "server": {"options": {}}},
+        )
+
+
+def test_configure_model_combines_vae_and_text_encoder(monkeypatch):
+    responses = {
+        "/sdapi/v1/options": {"sd_model_checkpoint": "old", "forge_additional_modules": []},
+        "/sdapi/v1/sd-models": [{"title": "anima/model.safetensors"}],
+        "/sdapi/v1/sd-modules": [
+            {"model_name": "vae.safetensors", "filename": "/vae.safetensors"},
+            {"model_name": "clip.safetensors", "filename": "/clip.safetensors"},
+        ],
+    }
+    monkeypatch.setattr(webui, "get_json", lambda _base, path, *args, **kwargs: responses[path])
+    sent = []
+    monkeypatch.setattr(
+        api,
+        "request_post_wrapper",
+        lambda _url, data, *args, **kwargs: sent.append(json.loads(data))
+        or SimpleNamespace(status_code=200),
+    )
+    assert api.set_sd_model(
+        "model.safetensors", sd_vae="vae.safetensors", text_encoder="clip.safetensors"
+    )
+    assert sent[0]["forge_additional_modules"] == ["/vae.safetensors", "/clip.safetensors"]
+
+
 def test_missing_payload_checkpoint_is_rejected(monkeypatch):
     monkeypatch.setattr(webui, "get_json", lambda *a, **k: [])
     with pytest.raises(ValueError, match="Checkpoint not found"):
@@ -224,3 +298,12 @@ def test_runner_passes_selected_model_without_eager_switch(monkeypatch):
     assert runner.run("sample", context_stub) is False
     assert captured[0].api_set_sd_model == "anima_2b"
     assert captured[0].ui_type == "neo" and captured[0].reference_images == ["reference.png"]
+
+
+def test_runner_namespace_uses_canonical_module_options():
+    from modules.tools import txt2img as runner
+    profile = {"options": {"vae": "vae.safetensors", "text_encoder": "clip.safetensors"}}
+    context_stub = SimpleNamespace(server_type="neo")
+    args = runner._build_cp2_namespace(profile, "http://localhost:7860", context_stub)
+    assert args.api_set_sd_vae == "vae.safetensors"
+    assert args.text_encoder == "clip.safetensors"

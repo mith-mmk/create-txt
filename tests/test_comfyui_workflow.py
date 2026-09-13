@@ -80,6 +80,34 @@ def test_flux_family_uses_customizable_nodes():
     assert "CLIPLoader" in class_types
 
 
+def test_flux_text_encoder_option_selects_clip_file():
+    workflow, _ = ComfyUIWorkflow().createWorkflow(
+        "test",
+        "",
+        {
+            "workflow_family": "flux",
+            "checkpoint": "flux1-dev.safetensors",
+            "text_encoder": "qwen_3_4b.safetensors",
+        },
+    )
+    clip_nodes = [
+        node for node in workflow.values()
+        if isinstance(node, dict) and node.get("class_type") == "CLIPLoader"
+    ]
+    assert clip_nodes[0]["inputs"]["clip_name"] == "qwen_3_4b.safetensors"
+
+
+def test_automatic_text_encoder_keeps_flux_default():
+    workflow, _ = ComfyUIWorkflow().createWorkflow(
+        "test", "", {"workflow_family": "flux", "checkpoint": "flux1-dev.safetensors"}
+    )
+    clip_nodes = [
+        node for node in workflow.values()
+        if isinstance(node, dict) and node.get("class_type") == "CLIPLoader"
+    ]
+    assert clip_nodes[0]["inputs"]["clip_name"] == "clip_l.safetensors"
+
+
 def test_template_controlnet_injection():
     template = {
         "10": {"class_type": "LoadImage", "inputs": {"image": "old.png"}},

@@ -221,8 +221,18 @@ def build_comfyui_spec(prompt_text, options):
         spec = {}
     spec.setdefault("family", merged.get("workflow_family", "sd15"))
     spec.setdefault("mode", merged.get("workflow_mode", "txt2img"))
-    spec.setdefault("model", merged.get("checkpoint", merged.get("sd_model")))
-    spec.setdefault("vae", merged.get("vae", merged.get("sd_vae")))
+    spec.setdefault(
+        "model", merged.get("model", merged.get("checkpoint", merged.get("sd_model")))
+    )
+    vae = merged.get("vae", merged.get("sd_vae"))
+    if vae in ("Automatic", "None"):
+        vae = None
+    spec.setdefault("vae", vae)
+    text_encoder = merged.get("text_encoder")
+    if text_encoder not in (None, "Automatic", "None"):
+        # ComfyUI names the text-encoder file clip_name.  Keep Automatic
+        # unset so the workflow's family default remains in effect.
+        spec.setdefault("clip_name", text_encoder)
     spec.setdefault("clip_skip", merged.get("stop_at_clip_layer"))
     spec.setdefault("prompt", merged.get("prompt", ""))
     spec.setdefault("negative_prompt", merged.get("negative_prompt", ""))
@@ -622,11 +632,14 @@ class ComfyUIWorkflow:
 
     def createWorkflow(self, prompt, negative_prompt, options=None):
         normalized = _normalize_family_mode(options or {})
+        vae = normalized.get("vae", self.vae)
+        if vae in ("Automatic", "None"):
+            vae = None
         spec = {
             "family": normalized.get("workflow_family", "sd15"),
             "mode": normalized.get("workflow_mode", "txt2img"),
-            "model": normalized.get("checkpoint", self.checkpoint),
-            "vae": normalized.get("vae", self.vae),
+            "model": normalized.get("model", normalized.get("checkpoint", self.checkpoint)),
+            "vae": vae,
             "clip_skip": normalized.get("stop_at_clip_layer"),
             "prompt": prompt,
             "negative_prompt": negative_prompt,
@@ -656,11 +669,22 @@ class ComfyUIWorkflow:
                 "batch_size": normalized.get("batch_size", 1),
             },
         }
+        text_encoder = normalized.get("text_encoder")
+        if text_encoder not in (None, "Automatic", "None"):
+            spec["clip_name"] = text_encoder
         return self.createWorkflowFromSpec(spec, normalized)
 
     def createWorkflowFromSpec(self, spec, options=None):
         spec = copy.deepcopy(spec)
         options = options or {}
-        spec.setdefault("model", options.get("checkpoint", options.get("sd_model", self.checkpoint)))
-        spec.setdefault("vae", options.get("vae", options.get("sd_vae", self.vae)))
+        spec.setdefault(
+            "model", options.get("model", options.get("checkpoint", options.get("sd_model", self.checkpoint)))
+        )
+        vae = options.get("vae", options.get("sd_vae", self.vae))
+        if vae in ("Automatic", "None"):
+            vae = None
+        spec.setdefault("vae", vae)
+        text_encoder = options.get("text_encoder")
+        if "clip_name" not in spec and text_encoder not in (None, "Automatic", "None"):
+            spec["clip_name"] = text_encoder
         return self.compiler.compile(spec)
