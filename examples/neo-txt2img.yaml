@@ -16,6 +16,9 @@ command:
   save_images: false
 model_profile:
   anima:
+    options:
+      vae: qwen_image_vae.safetensors
+      text_encoder: Qwen3-0.6B-Base.Q8_0.gguf
     command:
       width: 1024
       height: 1024
@@ -23,6 +26,16 @@ model_profile:
       cfg_scale: 4
   anima_2.9b: null
   anima_3.8b: null
+  krea2:
+    options:
+      vae: qwen_image_vae.safetensors
+      text_encoder: qwen3vl_4b_fp8_scaled.safetensors
+    command:
+      width: 1024
+      height: 1024
+      steps: 8
+      cfg_scale: 1
+
 ui_profile:
   neo:
     command:
