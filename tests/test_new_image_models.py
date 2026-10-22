@@ -196,3 +196,20 @@ def test_comfy_rejects_all_invalid_workflows(monkeypatch):
     monkeypatch.setattr(ComufyClient, "checkWorkflow", lambda *a, **k: (None, None))
     monkeypatch.setattr(ComufyClient, "run", lambda *a, **k: pytest.fail("invalid workflow submitted"))
     assert ComufyClient.txt2img([{"workflow": {"1": {"class_type": "Missing", "inputs": {}}}}]) is False
+
+
+@pytest.mark.parametrize("options,expected", [
+    ({"denoising_strength": 0.5}, 0.5),
+    ({"nomal_denoising_strength": 0.4}, 0.4),
+    ({"denoising_strength": 0.5, "nomal_denoising_strength": 0.4}, 0.5),
+    ({"denoise": 0.3, "denoising_strength": 0.5}, 0.3),
+    ({"denoising_strength": 0}, 0),
+])
+def test_comfy_img2img_preserves_denoising_strength(options, expected):
+    options = dict(options, workflow_family="moss", model="moss.safetensors", image="input.png")
+    spec, merged = build_comfyui_spec({"prompt": "test"}, options)
+    assert spec["sampling"]["denoise"] == expected
+    workflow, info = ComfyUIWorkflow().createWorkflow("test", "", options)
+    sampler = next(n for n in workflow.values() if n.get("class_type") == "KSampler")
+    assert sampler["inputs"]["denoise"] == expected
+    assert info["denoising_strength"] == expected

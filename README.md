@@ -776,8 +776,27 @@ python cp2.py examples/qwen21-moss.yaml --profile qwen21-turbo --comfy --ui-type
 ComfyUI's Qwen text encoder allows zero reference images through its V3 dynamic
 input schema. The client accepts that txt2img configuration and returns failure
 if workflow validation leaves no executable workflows. The related regression
-suite passed **153 tests**. These live results cover txt2img only; img2img, masks,
-reference editing and other resolutions were not exercised in this test run.
+suite passed **158 tests** after the img2img follow-up below. Masks, reference
+editing and other resolutions were not exercised in these live tests.
+
+Neo img2img was also verified on 2026-10-22, using each model's preceding
+512x512 output as its initial image, seed 41007 and the prompt
+`a blue ceramic teapot on a wooden table`. All three requests saved PNGs.
+
+| Profile | Steps / CFG | Denoising strength | Observed output |
+| --- | --- | --- | --- |
+| moss | 50 / 3 | 0.5 | Input composition and red colour largely retained |
+| qwen21 | 32 / 2.5 | 0.5 | Input composition and red colour largely retained |
+| qwen21-turbo | 8 / 1 | 1.0 | Blue teapot; full fixed sigma schedule |
+
+Add `--api-type img2img --image input.png` to the Neo commands above and set
+`--override width=512,height=512,denoising_strength=0.5` (Turbo requires 1.0).
+Qwen's reference-edit switch is disabled for these ordinary img2img requests.
+These results verify the generation/saving path, not guaranteed colour editing.
+Neo's checkpoint, modules, preset and Qwen reference setting were restored after
+the tests. ComfyUI img2img remains unverified: its API was offline during the
+follow-up. The compiler now honours `denoising_strength`; explicit `denoise`
+takes precedence, and legacy `nomal_denoising_strength` remains a fallback.
 
 | YAML option | CLI | Purpose |
 | --- | --- | --- |

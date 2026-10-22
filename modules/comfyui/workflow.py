@@ -294,7 +294,7 @@ def build_comfyui_spec(prompt_text, options):
     sampling.setdefault("sampler_name", merged.get("sampler_name", defaults.get("sampler_name", "dpmpp_2m_sde")))
     sampling.setdefault("scheduler", merged.get("scheduler", defaults.get("scheduler", "karras")))
     sampling.setdefault(
-        "denoise", merged.get("denoise", merged.get("nomal_denoising_strength", 1))
+        "denoise", merged.get("denoise", merged.get("denoising_strength", merged.get("nomal_denoising_strength", 1)))
     )
     sampling.setdefault("batch_size", merged.get("batch_size", 1))
     save = spec.setdefault("save", {})
@@ -744,7 +744,7 @@ class ComfyUIWorkflow:
                 "sampler_name": normalized.get("sampler_name", defaults.get("sampler_name", "dpmpp_2m_sde")),
                 "scheduler": normalized.get("scheduler", defaults.get("scheduler", "karras")),
                 "denoise": normalized.get(
-                    "denoise", normalized.get("nomal_denoising_strength", 1)
+                    "denoise", normalized.get("denoising_strength", normalized.get("nomal_denoising_strength", 1))
                 ),
                 "batch_size": normalized.get("batch_size", 1),
             },
