@@ -273,7 +273,7 @@ def prepare_payloads(payloads, opt, mode, context=None):
         elif encoder_explicit and not _automatic_module(text_encoder):
             # An explicit encoder augments a YAML VAE selection and preserves
             # command-level modules when possible.
-            current = overrides.get("forge_additional_modules", overrides.get("sd_vae", []))
+            current = overrides.get("forge_additional_modules", overrides.get("sd_vae", _module_list(vae)))
             overrides[module_key] = _module_list(current) + _module_list(text_encoder)
         elif selected_modules or explicitly_empty:
             if "sd_vae" not in overrides and "forge_additional_modules" not in overrides:

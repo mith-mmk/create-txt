@@ -80,6 +80,20 @@ def test_qwen21_turbo_scheduler_preflight(monkeypatch):
         webui.prepare_payloads([{"steps": 32}], {}, "txt2img", context("qwen-image-2.1-turbo"))
 
 
+def test_cli_encoder_preserves_profile_vae(monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
+        {"model_name": "vae.safetensors", "filename": "/vae.safetensors"},
+        {"model_name": "encoder.safetensors", "filename": "/encoder.safetensors"},
+    ])
+    item = webui.prepare_payloads([{}], {
+        "vae": "vae.safetensors", "text_encoder": "encoder.safetensors",
+        "vae_explicit": False, "text_encoder_explicit": True,
+    }, "txt2img", context("qwen-image-2.1"))[0]
+    assert item["override_settings"]["forge_additional_modules"] == [
+        "/vae.safetensors", "/encoder.safetensors",
+    ]
+
+
 @pytest.mark.parametrize("model", ["qwen-image-2.1", "moss"])
 def test_new_models_resolve_neo_modules(model, monkeypatch):
     monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
