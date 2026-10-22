@@ -866,7 +866,14 @@ the test server.
 ## Long-form English prompt examples
 
 These offline examples build paragraphs instead of unordered tags. The YAML
-files contain reusable sentence blocks; the text files show their expanded output.
+files contain phrase variables (noun, verb and prepositional phrases), followed
+by sentence and paragraph templates; the text files show their expanded output.
+For example, `hair_main` and `hair_bangs` combine as
+`${hair_main} with ${hair_bangs}`, and `person_a_right_hand` supplies the noun
+phrase in `She holds ${person_a_right_hand} in her right hand.` Connectives,
+punctuation and agreement remain in the templates. Replace phrases with the
+same grammatical role and noun number. Repeated colour descriptions share
+`hair_colour` / `person_c_cloak_colour` so they stay consistent.
 
 | Example | YAML | Expanded English |
 | --- | --- | --- |
