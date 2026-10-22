@@ -30,6 +30,8 @@ MODEL_PARENTS = {
     "netayume-lumina": "lumina",
     "qwen-image": None,
     "qwen-image-edit": "qwen-image",
+    "qwen-image-2.0": None,
+    "qwen-image-2.1": None,
     "z-image": None,
     "z-image-turbo": "z-image",
     "anima": None,
@@ -48,6 +50,7 @@ MODEL_PARENTS = {
     "krea2-edit": "krea2",
     "krea2-turbo-edit": "krea2-turbo",
     "krea2-raw-edit": "krea2-raw",
+    "moss": None,
     # Existing ComfyUI/WebUI families; deliberately rejected only on Neo.
     "sd2": None,
     "sd35": None,
@@ -57,6 +60,11 @@ MODEL_ALIASES = {
     "il": "illustrius",
     "sd1": "sd15",
     "sd1.5": "sd15",
+    "qwen": "qwen-image",
+    "qwen2": "qwen-image-2.0",
+    "qwen21": "qwen-image-2.1",
+    "qwen-image2.1": "qwen-image-2.1",
+    "qwen_image_2.1": "qwen-image-2.1",
     "noob-ai": "noobai",
     "flux1": "flux",
     "sd3": "sd35",
@@ -69,6 +77,7 @@ MODEL_ALIASES = {
     "lumina-image-2.0": "lumina",
     "krea-2": "krea2",
     "anima_2.0b": "anima_2b",
+    "moss-image": "moss",
 }
 UI_TYPES = ("webui", "forge", "neo", "comfy")
 
@@ -116,6 +125,10 @@ def infer_model_type(name):
         family = f"anima_{version}" if version else "anima"
         return family + "-edit" if "edit" in name else family
     if "qwen" in name and ("image" in name or "edit" in name):
+        if re.search(r"qwen[\s_.-]*image[\s_.-]*2[._]?1(?:[^0-9]|$)", name):
+            return "qwen-image-2.1"
+        if re.search(r"qwen[\s_.-]*image[\s_.-]*2[._]0(?:[^0-9]|$)", name):
+            return "qwen-image-2.0"
         return "qwen-image-edit" if "edit" in name else "qwen-image"
     if "klein" in name:
         size = next((v for v in ("4b", "9b") if v in compact), None)
@@ -157,6 +170,8 @@ def infer_model_type(name):
         or compact in ("sd1", "sdv1")
     ):
         return "sd15"
+    if "moss" in name:
+        return "moss"
     return None
 
 

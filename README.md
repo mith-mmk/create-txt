@@ -680,6 +680,8 @@ Derived families inherit the settings of their parent in the order shown.
 | chroma | chroma-hd |
 | lumina | neta-lumina, netayume-lumina |
 | qwen-image | qwen-image-edit |
+| qwen-image-2.1 | Qwen Image 2.1 (aliases: qwen-image2.1, qwen21) |
+| moss | MOSS-Image Base/SFT (alias: moss-image) |
 | z-image | z-image-turbo |
 | anima | anima_2b, anima_2.9b, anima_3.8b, anima-edit |
 | ernie-image | ernie-image-turbo |
@@ -698,6 +700,30 @@ Defining an alias and its canonical key twice is an error. sd2 and sd35
 (aliases sd3 and sd3.5) remain available for existing backends.
 
 ### Image inputs and additional modules
+
+Qwen Image 2.1 and MOSS-Image work with current Forge Neo and ComfyUI 0.42.0+.
+Qwen 2.1 uses a different VAE and encoder from the original Qwen Image, so its
+profile is independent and does not inherit `qwen-image`. The existing
+`qwen-image-2.0` key remains independent too. Checkpoint names containing
+`qwen_image_2.1`, `qwen-image2.1` or `qwen_image21` select Qwen 2.1;
+`moss` selects MOSS-Image. Explicit `--model-type` takes precedence.
+
+See [examples/qwen21-moss.yaml](examples/qwen21-moss.yaml) for both backends.
+For ComfyUI, `model_type` selects the new family automatically; an explicit
+`--comfy-family` overrides it. The compiler uses `UNETLoader`, `CLIPLoader`
+(`qwen_image` / `moss_image`) and `VAELoader`. Qwen 2.1 uses
+`TextEncodeQwenImage21`; MOSS uses `EmptyFlux2LatentImage`. Override the
+default encoder/VAE filenames with `options.text_encoder` and `options.vae`
+to match installed files. Models are never downloaded automatically.
+
+Both families support ordinary img2img and masks through `--image` / `--mask`.
+On Neo, Qwen 2.1 also supports `--reference-image` through ImageStitch Integrated
+and `qwen21_do_reference`. Ordinary img2img disables that edit switch. On ComfyUI,
+reference editing requires an explicit workflow template; `reference_images`
+is not accepted by the built-in compiler. MOSS has no reference-edit switch.
+
+Node/file contracts follow the official [Qwen 2.1 workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_qwen_image_2_1_t2i.json)
+and [MOSS workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_moss_image_t2i.json).
 
 | YAML option | CLI | Purpose |
 | --- | --- | --- |

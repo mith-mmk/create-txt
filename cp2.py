@@ -207,7 +207,7 @@ def build_parser():
         "--comfy-family",
         type=str,
         default=None,
-        choices=["sd15", "sdxl", "sd35", "flux", "anima"],
+        choices=["sd15", "sdxl", "sd35", "flux", "anima", "qwen-image-2.1", "qwen-image2.1", "qwen21", "moss", "moss-image"],
     )
     parser.add_argument("--comfy-template", type=str, default=None)
     parser.add_argument("--comfy-image", type=str, default=None)
@@ -632,6 +632,11 @@ def dispatch_comfy(args, payload, options, yml, comfy_config):
 
     save_image = _resolve_save_image(comfy_config["save"])
     opt = build_common_save_options(args, options)
+    model_type = (yml.get("_generation_context") or {}).get("model_type")
+    if model_type is None:
+        from modules.generation_profile import normalize_model_type
+
+        model_type = normalize_model_type(args.model_type or options.get("model_type"))
     opt.update(
         {
             "sd_model": resolve_arg_or_options(
@@ -650,7 +655,9 @@ def dispatch_comfy(args, payload, options, yml, comfy_config):
             ),
             "text_encoder": resolve_arg_or_option(args, options, "text_encoder"),
             "save_image": save_image,
-            "workflow_family": comfy_config.get("family"),
+            "workflow_family": comfy_config.get("family") or (
+                model_type if model_type in {"qwen-image-2.1", "moss"} else None
+            ),
             "workflow_mode": comfy_config.get("mode"),
             "workflow_template": comfy_config.get("template"),
         }

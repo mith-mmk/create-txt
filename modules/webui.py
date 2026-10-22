@@ -199,7 +199,7 @@ def prepare_payloads(payloads, opt, mode, context=None):
     if references:
         if ui != "neo":
             raise ValueError("reference_images requires Forge Neo")
-        supported = {"flux-kontext", "flux2-klein", "qwen-image-edit", "anima", "krea2"}
+        supported = {"flux-kontext", "flux2-klein", "qwen-image-edit", "qwen-image-2.1", "anima", "krea2"}
         if not supported.intersection(model_chain(model_type)):
             raise ValueError("Reference images require a supported Edit model; set --model-type")
         scripts = get_json(base_url, "/sdapi/v1/script-info", userpass)
@@ -268,7 +268,8 @@ def prepare_payloads(payloads, opt, mode, context=None):
             chain = model_chain(model_type)
             edit = bool(references or (model_type and model_type.endswith("-edit")))
             for family, key in (("anima", "anima_do_reference"), ("flux2-klein", "klein_do_reference"),
-                                ("krea2", "krea2_do_reference")):
+                                ("krea2", "krea2_do_reference"),
+                                ("qwen-image-2.1", "qwen21_do_reference")):
                 if family not in chain:
                     continue
                 if key not in settings:

@@ -79,6 +79,9 @@ class WorkflowChecker:
         if alias is None:
             return sampler_name, scheduler_name
         normalized_sampler = alias.get("sampler") or sampler_name
+        if sampler_name == normalized_sampler and scheduler_name is not None:
+            # Canonical ComfyUI sampler names already have an explicit scheduler.
+            return sampler_name, scheduler_name
         normalized_scheduler = alias.get("scheduler") or scheduler_name
         printVerbose(
             f"Sampler {sampler_name} converted to "
@@ -177,6 +180,9 @@ class WorkflowChecker:
         node = workflow[node_id]
         class_type = node["class_type"]
         role = node.get("_meta", {}).get("role")
+        if class_type == "TextEncodeQwenImage21":
+            key = "negative_prompt" if position[1] == 1 else "prompt"
+            return node["inputs"].get(key, "") + prompt
         if class_type == "CLIPTextEncode":
             return node["inputs"].get("text", "") + prompt
         if class_type == "CLIPTextEncodeSDXL":

@@ -678,6 +678,8 @@ model_profileを省略します。オフライン生成ではAPIへ接続せず�
 | chroma | chroma-hd |
 | lumina | neta-lumina、netayume-lumina |
 | qwen-image | qwen-image-edit |
+| qwen-image-2.1 | Qwen Image 2.1（別名 qwen-image2.1、qwen21） |
+| moss | MOSS-Image Base/SFT（別名 moss-image） |
 | z-image | z-image-turbo |
 | anima | anima_2b、anima_2.9b、anima_3.8b、anima-edit |
 | ernie-image | ernie-image-turbo |
@@ -695,6 +697,28 @@ anima_2.0b → anima_2bです。別名と正規名を重複定義するとエラ
 既存バックエンド用にはsd2とsd35（別名sd3、sd3.5）も指定できます。
 
 ### 画像入力と追加モジュール
+
+Qwen Image 2.1とMOSS-Imageは最新版Forge NeoおよびComfyUI 0.42.0以降に対応します。
+Qwen 2.1は従来のQwen ImageとVAE・エンコーダーが異なるため、`qwen-image`を
+継承しない独立したprofileです。既存の`qwen-image-2.0`も独立して扱います。
+チェックポイント名の`qwen_image_2.1`・`qwen-image2.1`・`qwen_image21`から2.1を、
+`moss`からMOSSを判定します。`--model-type`で明示指定すると優先されます。
+
+両経路の設定例は[examples/qwen21-moss.yaml](examples/qwen21-moss.yaml)にあります。
+ComfyUIでは`model_type`から新しいfamilyを選び、明示した`--comfy-family`を優先します。
+`UNETLoader`、`CLIPLoader`（`qwen_image` / `moss_image`）、`VAELoader`を使い、
+Qwen 2.1では`TextEncodeQwenImage21`、MOSSでは`EmptyFlux2LatentImage`を使います。
+実際のファイル名に合わせ、`options.text_encoder`・`options.vae`で既定名を上書きできます。
+モデルの自動取得は行いません。
+
+両モデルとも`--image`・`--mask`による通常img2imgとマスクに対応します。
+NeoのQwen 2.1はImageStitch Integratedと`qwen21_do_reference`を使う
+`--reference-image`にも対応し、通常img2imgでは編集スイッチを無効にします。
+ComfyUIの参照編集は専用workflow templateを指定してください。組み込みコンパイラーでは
+`reference_images`を受け付けません。MOSSには参照編集スイッチはありません。
+
+ノード・ファイルの仕様は公式の[Qwen 2.1 workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_qwen_image_2_1_t2i.json)と
+[MOSS workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_moss_image_t2i.json)に基づきます。
 
 | YAMLのoptions | CLI | 用途 |
 | --- | --- | --- |

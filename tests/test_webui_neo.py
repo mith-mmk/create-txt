@@ -46,6 +46,39 @@ def test_normal_img2img_disables_edit(picture, model, key):
     assert result["override_settings"][key] is False
 
 
+def test_qwen21_references_and_normal_img2img(picture, monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
+        {"name": "imagestitch integrated", "is_alwayson": True, "is_img2img": False}
+    ])
+    ctx = context("qwen-image-2.1", qwen21_do_reference=True)
+    edited = webui.prepare_payloads([{}], {"reference_images": [picture]}, "txt2img", ctx)[0]
+    assert edited["override_settings"]["qwen21_do_reference"] is True
+    normal = webui.prepare_payloads([{}], {"image": picture}, "img2img", ctx)[0]
+    assert normal["override_settings"]["qwen21_do_reference"] is False
+
+
+def test_qwen21_missing_edit_capability(picture, monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
+        {"name": "imagestitch integrated", "is_alwayson": True, "is_img2img": False}
+    ])
+    with pytest.raises(ValueError, match="qwen21_do_reference"):
+        webui.prepare_payloads([{}], {"reference_images": [picture]}, "txt2img", context("qwen-image-2.1"))
+
+
+@pytest.mark.parametrize("model", ["qwen-image-2.1", "moss"])
+def test_new_models_resolve_neo_modules(model, monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
+        {"model_name": "encoder.safetensors", "filename": "/encoders/encoder.safetensors"},
+        {"model_name": "vae.safetensors", "filename": "/vae/vae.safetensors"},
+    ])
+    result = webui.prepare_payloads([{"prompt": "teapot"}], {
+        "vae": "vae.safetensors", "text_encoder": "encoder.safetensors",
+    }, "txt2img", context(model))[0]
+    assert result["override_settings"]["forge_additional_modules"] == [
+        "/vae/vae.safetensors", "/encoders/encoder.safetensors"
+    ]
+
+
 def test_missing_script_fails_before_generation(picture, monkeypatch):
     monkeypatch.setattr(webui, "get_json", lambda *a, **k: [])
     with pytest.raises(ValueError, match="ImageStitch"):

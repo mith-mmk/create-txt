@@ -65,6 +65,29 @@ def test_duplicate_alias_rejected():
         apply_generation_profiles({"model_profile": {"illustrious": {}, "illustrius": {}}}, {})
 
 
+@pytest.mark.parametrize("selected,profile,canonical", [
+    ("qwen-image2.1", "qwen21", "qwen-image-2.1"),
+    ("qwen-image-2.1", "qwen-image2.1", "qwen-image-2.1"),
+    ("moss-image", "moss", "moss"),
+])
+def test_new_model_profiles_are_independent(selected, profile, canonical):
+    yml = {"options": {"model_type": selected}, "model_profile": {
+        "qwen-image": {"options": {"vae": "old-vae"}},
+        profile: {"options": {"vae": "new-vae", "text_encoder": "new-encoder"}},
+    }}
+    context = apply_generation_profiles(yml, {})
+    assert context["model_type"] == canonical
+    assert context["applied_profiles"] == [f"model_profile.{canonical}"]
+    assert yml["options"]["vae"] == "new-vae"
+    assert yml["options"]["text_encoder"] == "new-encoder"
+
+
+@pytest.mark.parametrize("alias,canonical", [("qwen-image2.1", "qwen-image-2.1"), ("moss-image", "moss")])
+def test_new_model_duplicate_alias_rejected(alias, canonical):
+    with pytest.raises(ValueError, match="Duplicate"):
+        apply_generation_profiles({"model_profile": {alias: {}, canonical: {}}}, {})
+
+
 def test_profiles_deep_copy_and_single_resolution():
     patch = {"command": {"steps": 3}, "options": {"model_type": "noobai"}}
     original = copy.deepcopy(patch)
@@ -264,6 +287,14 @@ ui_profile:
     ("anima_2.9b_fp8", "anima_2.9b"), ("Anima-3.8B", "anima_3.8b"),
     ("anima/Asuma_Anima_V1", "anima"), ("anima_2b-edit", "anima_2b-edit"),
     ("qwen_image_edit_2509", "qwen-image-edit"), ("flux1-kontext-dev", "flux-kontext"),
+    ("Qwen-Image-2.1.safetensors", "qwen-image-2.1"),
+    ("qwen-image2.1-edit.safetensors", "qwen-image-2.1"),
+    ("qwen_image_2.1_turbo", "qwen-image-2.1"),
+    ("qwen_image21", "qwen-image-2.1"),
+    ("qwen-image-2.0", "qwen-image-2.0"),
+    ("qwen-image-2.10", "qwen-image"),
+    ("moss_image_sft_int8_convrot.safetensors", "moss"),
+    ("MOSS-Image-Base", "moss"),
     ("flux2-klein-9b", "flux2-klein-9b"), ("chroma1-hd", "chroma-hd"),
     ("NetaYume-Lumina", "netayume-lumina"), ("z_image_turbo", "z-image-turbo"),
     ("ernie-image-turbo", "ernie-image-turbo"), ("krea2-raw", "krea2-raw"),

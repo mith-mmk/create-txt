@@ -125,6 +125,38 @@ def _family_defaults(family):
             "supports_clip_skip": True,
             "template_only": True,
         },
+        "qwen-image-2.1": {
+            "width": 1024,
+            "height": 1024,
+            "checkpoint_loader": "UNETLoader",
+            "clip_loader": "CLIPLoader",
+            "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+            "clip_type": "qwen_image",
+            "vae": "qwen_image_2.1_vae_bf16.safetensors",
+            "text_encoder": "TextEncodeQwenImage21",
+            "latent": "EmptyLatentImage",
+            "supports_clip_skip": False,
+            "steps": 32,
+            "cfg": 2.5,
+            "sampler_name": "euler",
+            "scheduler": "simple",
+        },
+        "moss": {
+            "width": 1024,
+            "height": 1024,
+            "checkpoint_loader": "UNETLoader",
+            "clip_loader": "CLIPLoader",
+            "clip_name": "qwen3.5_9b_w4a8_gptq.safetensors",
+            "clip_type": "moss_image",
+            "vae": "flux2-vae_small.safetensors",
+            "text_encoder": "CLIPTextEncode",
+            "latent": "EmptyFlux2LatentImage",
+            "supports_clip_skip": False,
+            "steps": 50,
+            "cfg": 3.0,
+            "sampler_name": "euler",
+            "scheduler": "simple",
+        },
     }
     return copy.deepcopy(defaults.get(family, defaults["sd15"]))
 
@@ -145,6 +177,9 @@ def _normalize_family_mode(options):
         "flux.1": "flux",
         "flux": "flux",
         "anima": "anima",
+        "qwen-image2.1": "qwen-image-2.1",
+        "qwen21": "qwen-image-2.1",
+        "moss-image": "moss",
     }
     family = aliases.get(family, family)
     mode = options.get("workflow_mode")
@@ -216,6 +251,7 @@ def build_comfyui_spec(prompt_text, options):
         if key not in {"comfyui", "workflow", "verbose"}:
             merged[key] = value
     merged = _normalize_family_mode(merged)
+    defaults = _family_defaults(merged["workflow_family"])
 
     if not spec:
         spec = {}
@@ -245,10 +281,10 @@ def build_comfyui_spec(prompt_text, options):
     spec.setdefault("template", merged.get("workflow_template"))
     sampling = spec.setdefault("sampling", {})
     sampling.setdefault("seed", merged.get("seed", -1))
-    sampling.setdefault("steps", merged.get("steps", 20))
-    sampling.setdefault("cfg", merged.get("cfg_scale", 7))
-    sampling.setdefault("sampler_name", merged.get("sampler_name", "dpmpp_2m_sde"))
-    sampling.setdefault("scheduler", merged.get("scheduler", "karras"))
+    sampling.setdefault("steps", merged.get("steps", defaults.get("steps", 20)))
+    sampling.setdefault("cfg", merged.get("cfg_scale", defaults.get("cfg", 7)))
+    sampling.setdefault("sampler_name", merged.get("sampler_name", defaults.get("sampler_name", "dpmpp_2m_sde")))
+    sampling.setdefault("scheduler", merged.get("scheduler", defaults.get("scheduler", "karras")))
     sampling.setdefault(
         "denoise", merged.get("denoise", merged.get("nomal_denoising_strength", 1))
     )
@@ -373,8 +409,8 @@ class ComfyUIWorkflowCompiler:
             defaults["latent"],
             {
                 "batch_size": sampling.get("batch_size", 1),
-                "height": spec.get("height", defaults["height"]),
-                "width": spec.get("width", defaults["width"]),
+                "height": spec.get("height") or defaults["height"],
+                "width": spec.get("width") or defaults["width"],
             },
         )
         return core.add_node(latent_class, latent_inputs, role="latent")
@@ -415,8 +451,8 @@ class ComfyUIWorkflowCompiler:
                 "clip_loader",
                 defaults.get("clip_loader", "CLIPLoader"),
                 {
-                    "clip_name": spec.get("clip_name", "clip_l.safetensors"),
-                    "type": spec.get("clip_type", "stable_diffusion"),
+                    "clip_name": spec.get("clip_name") or defaults.get("clip_name", "clip_l.safetensors"),
+                    "type": spec.get("clip_type") or defaults.get("clip_type", "stable_diffusion"),
                 },
             )
             clip_ref = core.add_node(
@@ -426,7 +462,7 @@ class ComfyUIWorkflowCompiler:
                 spec,
                 "vae_loader",
                 "VAELoader",
-                {"vae_name": spec.get("vae") or "ae.safetensors"},
+                {"vae_name": spec.get("vae") or defaults.get("vae", "ae.safetensors")},
             )
             vae_ref = core.add_node(
                 vae_loader_class, vae_loader_inputs, role="vae_loader"
@@ -498,7 +534,7 @@ class ComfyUIWorkflowCompiler:
 
     def compile(self, spec):
         spec = copy.deepcopy(spec)
-        spec["family"] = str(spec.get("family", "sd15")).lower()
+        spec["family"] = _normalize_family_mode({"workflow_family": spec.get("family", "sd15")})["workflow_family"]
         spec["mode"] = str(spec.get("mode", "txt2img")).lower()
         spec.setdefault("controlnet", [])
         spec.setdefault("loras", [])
@@ -548,12 +584,30 @@ class ComfyUIWorkflowCompiler:
             core, model_ref, clip_ref, negative_chain
         )
 
-        positive_ref = self._add_text_conditioning(
-            core, spec["family"], prompt, pos_clip, "positive", spec=spec
-        )
-        negative_ref = self._add_text_conditioning(
-            core, spec["family"], negative_prompt, neg_clip, "negative", spec=spec
-        )
+        if spec["family"] == "qwen-image-2.1":
+            # This encoder produces both conditionings in one call (ports 0/1).
+            # Separate calls retain the positive/negative LoRA chains.
+            def encode_qwen(text, negative, clip, role):
+                cls, inputs = _merge_node_definition(
+                    spec, "text_encoder", "TextEncodeQwenImage21",
+                    {"clip": clip, "prompt": text, "negative_prompt": negative,
+                     "resolution": 1024, "vae": vae_ref},
+                )
+                return core.add_node(cls, inputs, role=role)
+
+            positive_ref = encode_qwen(prompt, negative_prompt, pos_clip, "positive")
+            if pos_clip == neg_clip:
+                negative_ref = [positive_ref[0], 1]
+            else:
+                negative_node = encode_qwen(prompt, negative_prompt, neg_clip, "negative")
+                negative_ref = [negative_node[0], 1]
+        else:
+            positive_ref = self._add_text_conditioning(
+                core, spec["family"], prompt, pos_clip, "positive", spec=spec
+            )
+            negative_ref = self._add_text_conditioning(
+                core, spec["family"], negative_prompt, neg_clip, "negative", spec=spec
+            )
 
         sampling = spec.get("sampling", {})
         seed = sampling.get("seed", -1)
@@ -563,13 +617,14 @@ class ComfyUIWorkflowCompiler:
         info["sd_model_name"] = spec.get("model")
         info["sd_vae_name"] = spec.get("vae")
         info["clip_skip"] = abs(spec.get("clip_skip", 0)) if spec.get("clip_skip") else None
-        info["width"] = spec.get("width", _family_defaults(spec["family"])["width"])
-        info["height"] = spec.get("height", _family_defaults(spec["family"])["height"])
+        defaults = _family_defaults(spec["family"])
+        info["width"] = spec.get("width") or defaults["width"]
+        info["height"] = spec.get("height") or defaults["height"]
         info["batch_size"] = sampling.get("batch_size", 1)
-        info["cfg_scale"] = sampling.get("cfg", 7)
-        info["steps"] = sampling.get("steps", 20)
-        info["sampler_name"] = sampling.get("sampler_name", "dpmpp_2m_sde")
-        info["scheduler"] = sampling.get("scheduler", "karras")
+        info["cfg_scale"] = sampling.get("cfg", defaults.get("cfg", 7))
+        info["steps"] = sampling.get("steps", defaults.get("steps", 20))
+        info["sampler_name"] = sampling.get("sampler_name", defaults.get("sampler_name", "dpmpp_2m_sde"))
+        info["scheduler"] = sampling.get("scheduler", defaults.get("scheduler", "karras"))
         info["denoising_strength"] = sampling.get("denoise", 1)
 
         sampler_class, sampler_inputs = _merge_node_definition(
@@ -632,6 +687,7 @@ class ComfyUIWorkflow:
 
     def createWorkflow(self, prompt, negative_prompt, options=None):
         normalized = _normalize_family_mode(options or {})
+        defaults = _family_defaults(normalized["workflow_family"])
         vae = normalized.get("vae", self.vae)
         if vae in ("Automatic", "None"):
             vae = None
@@ -659,10 +715,10 @@ class ComfyUIWorkflow:
             },
             "sampling": {
                 "seed": normalized.get("seed", -1),
-                "steps": normalized.get("steps", 20),
-                "cfg": normalized.get("cfg_scale", 7),
-                "sampler_name": normalized.get("sampler_name", "dpmpp_2m_sde"),
-                "scheduler": normalized.get("scheduler", "karras"),
+                "steps": normalized.get("steps", defaults.get("steps", 20)),
+                "cfg": normalized.get("cfg_scale", defaults.get("cfg", 7)),
+                "sampler_name": normalized.get("sampler_name", defaults.get("sampler_name", "dpmpp_2m_sde")),
+                "scheduler": normalized.get("scheduler", defaults.get("scheduler", "karras")),
                 "denoise": normalized.get(
                     "denoise", normalized.get("nomal_denoising_strength", 1)
                 ),
