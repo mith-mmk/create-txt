@@ -767,7 +767,7 @@ python cp2.py examples/qwen21-moss.yaml --profile qwen21-turbo --comfy --ui-type
 
 ComfyUIのQwenエンコーダーはV3可変入力として参照画像0件を許容します。
 クライアントもこのtxt2img設定を受け付け、検証後に実行可能なworkflowが0件なら失敗を返します。
-後述のimg2img追加確認後、関連回帰テストは**158件通過**しました。
+後述のimg2img追加確認後、関連回帰テストは**159件通過**しました。
 マスク、参照編集、別解像度は、これらの実環境テストでは未検証です。
 
 2026-10-22にはNeoのimg2imgも確認しました。各モデルで前回生成した512×512画像を
@@ -785,9 +785,17 @@ ComfyUIのQwenエンコーダーはV3可変入力として参照画像0件を許
 通常img2imgではQwenの参照編集スイッチを無効にします。
 生成・保存経路の確認であり、色変更の成功を保証するテストではありません。
 Neoのチェックポイント・追加モジュール・プリセット・Qwen参照設定はテスト後に復元しました。
-ComfyUIは追加確認時にAPIが停止していたため、img2imgの実生成は未検証です。
 コンパイラーは`denoising_strength`を反映するよう修正しました。明示した`denoise`を優先し、
 旧キー`nomal_denoising_strength`もフォールバックとして維持しています。
+
+その後ComfyUI 0.42.0でも、上表と同じ初期画像・seed・プロンプト・denoiseで
+3モデルすべてのimg2img生成と512×512 PNG保存を確認しました。PNG内のworkflowには
+`LoadImage → VAEEncode`、Turboでは公式8ステップの`ManualSigmas`が記録されています。
+MOSSと通常Qwenは入力の赤色が強く残り、Turboは青いティーポットになりました。
+上記ComfyUIコマンドに`--image input.png`を追加し、同様に
+`--override width=512,height=512,denoising_strength=0.5`を指定します（Turboは1.0）。
+アップロード時の`overwrite`はファイルではなくmultipartフォーム項目として送信します。
+この検証環境ではNeoとComfyUIを同時起動できないため、片方ずつ起動して実行します。
 
 | YAMLのoptions | CLI | 用途 |
 | --- | --- | --- |

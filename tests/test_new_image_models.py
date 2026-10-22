@@ -213,3 +213,26 @@ def test_comfy_img2img_preserves_denoising_strength(options, expected):
     sampler = next(n for n in workflow.values() if n.get("class_type") == "KSampler")
     assert sampler["inputs"]["denoise"] == expected
     assert info["denoising_strength"] == expected
+
+
+def test_comfy_upload_uses_form_field_for_overwrite(monkeypatch):
+    import asyncio
+    import httpx
+    from modules.comfyui import ComufyClient
+
+    requests = []
+
+    def receive(request):
+        requests.append(request)
+        return httpx.Response(200, json={"name": "input.png"})
+
+    original_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda: original_client(transport=httpx.MockTransport(receive)))
+    client = ComufyClient()
+    result = asyncio.run(client.uploadImage("input.png", binary=b"image-bytes", overwrite=True))
+    assert result["name"] == "input.png"
+    body = requests[0].content
+    assert b'name="overwrite"\r\n\r\ntrue' in body
+    assert b'name="image"; filename="input.png"' in body
+    assert b"image-bytes" in body
+    assert b'filename="overwrite"' not in body

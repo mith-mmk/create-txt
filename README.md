@@ -776,7 +776,7 @@ python cp2.py examples/qwen21-moss.yaml --profile qwen21-turbo --comfy --ui-type
 ComfyUI's Qwen text encoder allows zero reference images through its V3 dynamic
 input schema. The client accepts that txt2img configuration and returns failure
 if workflow validation leaves no executable workflows. The related regression
-suite passed **158 tests** after the img2img follow-up below. Masks, reference
+suite passed **159 tests** after the img2img follow-up below. Masks, reference
 editing and other resolutions were not exercised in these live tests.
 
 Neo img2img was also verified on 2026-10-22, using each model's preceding
@@ -794,9 +794,18 @@ Add `--api-type img2img --image input.png` to the Neo commands above and set
 Qwen's reference-edit switch is disabled for these ordinary img2img requests.
 These results verify the generation/saving path, not guaranteed colour editing.
 Neo's checkpoint, modules, preset and Qwen reference setting were restored after
-the tests. ComfyUI img2img remains unverified: its API was offline during the
-follow-up. The compiler now honours `denoising_strength`; explicit `denoise`
-takes precedence, and legacy `nomal_denoising_strength` remains a fallback.
+the tests. The compiler honours `denoising_strength`; explicit `denoise` takes
+precedence, and legacy `nomal_denoising_strength` remains a fallback.
+
+ComfyUI 0.42.0 img2img was subsequently verified for all three models with the
+same initial images, seed, prompt and denoising strengths as the Neo table.
+All three saved 512x512 PNGs. Embedded workflows confirm `LoadImage -> VAEEncode`
+and, for Turbo, `ManualSigmas` with the official eight-step schedule. MOSS and
+regular Qwen retained the red input appearance; Turbo produced a blue teapot.
+For the ComfyUI commands above, add `--image input.png` and the same
+`--override width=512,height=512,denoising_strength=0.5` (Turbo: 1.0).
+The upload client sends `overwrite` as a multipart form field, not a file part.
+In the tested environment, run Neo and ComfyUI one at a time.
 
 | YAML option | CLI | Purpose |
 | --- | --- | --- |

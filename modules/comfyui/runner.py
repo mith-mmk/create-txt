@@ -185,9 +185,13 @@ class ComufyClient:
             with open(filename, "rb") as f:
                 binary = f.read()
         payload = {"image": (os.path.basename(filename), binary, minetype)}
-        if overwrite:
-            payload["overwrite"] = True  # type: ignore
-        res = await self.client.post(f"{self.hostname}/upload/image", files=payload)
+        # This is a form field, not a file part. Asset preparation and sampling
+        # run in separate event loops, so close upload connections in this loop.
+        data = {"overwrite": "true"} if overwrite else {}
+        async with httpx.AsyncClient() as upload_client:
+            res = await upload_client.post(
+                f"{self.hostname}/upload/image", files=payload, data=data
+            )
         if res.status_code != 200:
             raise Exception(res.text)
         return res.json()
