@@ -874,6 +874,12 @@ phrase in `She holds ${person_a_right_hand} in her right hand.` Connectives,
 punctuation and agreement remain in the templates. Replace phrases with the
 same grammatical role and noun number. Repeated colour descriptions share
 `hair_colour` / `person_c_cloak_colour` so they stay consistent.
+Every variable has two candidates, including sentence templates and profile
+overrides. `random: 1` generates one combination per run; change it to `random: 10`
+to generate ten. Each variable is chosen once per output, so repeated names and
+colours agree. The text files show the all-first-candidate examples, not a fixed
+result for randomized runs. Avoid raw semicolons in variable text: the reader
+uses them as column separators.
 
 | Example | YAML | Expanded English |
 | --- | --- | --- |
@@ -888,8 +894,9 @@ python cp2.py examples/natural-language-spatial.yaml --output outputs/natural-la
 The maid sample separates `person1`, `time`, `place`, `action`, `dessin` and
 `effects`; `--profile red_dress` replaces the black dress, and
 `--profile alternate_action` changes the pose and hand movements as one paragraph.
-The spatial sample places A/Aria, B/Bram and C/Celia from the viewer's right to
-left. Aria's sword belongs in her own right hand and her shield in her left.
+The spatial sample places A (Aria/Elena), B (Bram/Cedric) and C (Celia/Livia)
+from the viewer's right to left. A's sword belongs in her own right hand and
+her shield in her left.
 All three face the viewer, so screen coordinates and anatomical handedness are
 defined separately. `--profile abc_left_to_right` swaps the outer screen positions
 while preserving each person's belongings and hand assignments. The examples

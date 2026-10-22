@@ -14,6 +14,9 @@
 # Phrase variables come first; sentence/paragraph templates follow them.
 # Replace a whole phrase, not individual words: e.g. hair_main = long brown hair.
 # Keep the same noun number, grammatical role and viewpoint for alternatives.
+# Every variable has two candidates; grammatical roles and fixed relationships are preserved.
+# Each referenced variable is selected once per output, including repeated names and colours.
+# Do not put raw semicolons in variable text: they delimit columns in the prompt reader.
 version: 2
 options:
   json: true
@@ -35,195 +38,302 @@ command:
 variables:
   maid_role:
     - a maid
+    - a young housemaid
   maid_age:
     - in her early twenties
+    - around twenty years old
   hair_main:
     - long ${hair_colour} hair
+    - long, gently wavy ${hair_colour} hair
   hair_colour:
     - brown
+    - chestnut-brown
   hair_bangs:
     - side-swept bangs
+    - bangs swept to one side
   eyes_main:
     - dark eyes
+    - deep, dark eyes
   dress_main:
     - a black maid dress
+    - a simple black maid dress
   apron_main:
     - a white apron
+    - a neatly tied white apron
   headpiece_main:
     - a white frilled maid headpiece
+    - a white lace-trimmed maid headpiece
   hair_fall:
     - falls down her back
+    - spills down her back
   hair_strands:
     - a few loose strands
+    - several loose strands
   hair_strands_position:
     - beside her cheek
+    - along the side of her face
   expression_main:
     - calm and absorbed
+    - quietly focused
   gaze_direction:
     - lowered toward the plants
+    - directed down toward the flower bed
   time_main:
     - early evening
+    - late afternoon, just before sunset
   sunlight_main:
     - the last low sunlight
+    - the low evening sunlight
   sky_brightness:
     - still bright enough
+    - bright enough
   shade_palette:
     - cooler tones
+    - soft, cool colours
   garden_corner:
     - a secluded corner
+    - a quiet, sheltered corner
   garden_main:
     - a mansion's garden
+    - a large mansion's garden
   path_main:
     - a narrow stone path
+    - a slim path of pale stone
   flower_bed_main:
     - a small flower bed
+    - a modest bed of garden flowers
   hedge_main:
     - neatly trimmed hedges
+    - carefully clipped hedges
   mansion_position:
     - visible beyond the hedge
+    - partly visible past the hedge
   mansion_distance:
     - softened by distance
+    - softened by the distance
   mansion_cover:
     - partly hidden by foliage
+    - partly screened by leaves
   basket_main:
     - A small wicker basket
+    - A shallow wicker basket
   basket_position:
     - on the path beside the flower bed
+    - beside the flower bed on the stone path
   basket_reach:
     - within easy reach
+    - within comfortable reach
   pose_main:
     - kneels at the edge of the bed
+    - kneels beside the flower bed
   pose_lean:
     - leans forward slightly
+    - bends forward a little
   work_main:
     - pull weeds
+    - remove small weeds
   work_position:
     - from between the flowers
+    - from the spaces between the flowers
   hand_primary_action:
     - closes around a weed near its base
+    - grips a small weed close to the ground
   hand_other_action:
     - steadies the surrounding soil
+    - supports the loose soil around it
   plant_care:
     - keeping the delicate stems out of the way
+    - protecting the slender flower stems beside it
   weed_details:
     - A few freshly pulled weeds
+    - Several small clumps of uprooted weeds
   skirt_pose:
     - gathers naturally around her knees
+    - falls in loose folds around her knees
   apron_edge:
     - the lower edge of her apron
+    - the bottom hem of her apron
   soil_details:
     - Small traces of soil on her fingertips
+    - Tiny specks of soil on her fingertips
   work_mood:
     - practical and unhurried
+    - patient and methodical
   camera_position:
     - from slightly above and to her side
+    - from a slightly elevated position beside her
   camera_contents:
     - her face, both hands, the flower bed and the basket
+    - her expression, her hands, the flowers and the wicker basket
   figure_position:
     - occupies the foreground
+    - fills the near part of the scene
   path_leading_line:
     - the curve of the path
+    - the gentle bend in the path
   background_destination:
     - toward the mansion in the background
+    - toward the distant mansion
   foreground_foliage:
     - Leaves near the edge of the frame
+    - A few leaves along the edge of the image
   medium_main:
     - an anime-style illustration
+    - an anime-inspired garden illustration
   eye_drawing:
     - expressive eyes
+    - gently expressive eyes
   hand_drawing:
     - carefully drawn hands
+    - clearly articulated hands
   linework_main:
     - fine, controlled linework
+    - delicate, precise linework
   shape_design:
     - Broad, readable shapes
+    - Clear, balanced shapes
   detail_subjects:
     - the folds of the dress, the apron trim and the nearby plants
+    - the dress folds, the edges of the apron and the closest leaves
   shading_main:
     - Soft cel shading
+    - Gentle cel shading
   light_main:
     - Warm light
+    - Soft evening light
   light_on_hair:
     - the edges of her ${hair_colour} hair
+    - the loose strands of her ${hair_colour} hair
   light_on_apron:
     - the upper folds of the white apron
+    - the raised folds of the white apron
   shadow_main:
     - longer, cooler shadows
+    - long, softly edged shadows
   light_pattern:
     - dappled patches of light
+    - small pools of filtered sunlight
   focus_target:
     - the maid and the small movements of her hands
+    - the maid and the careful movements of her fingers
   mood_main:
     - quiet and domestic
+    - peaceful and intimate
   mood_comparison:
     - an ordinary moment at the end of a working day
+    - a brief pause in the household routine before nightfall
   alternate_pose:
     - crouches beside the flower bed
+    - crouches at the edge of the flower bed
   alternate_inspection:
     - examining a small cluster of weeds
+    - looking closely at a few small weeds
   alternate_hand_primary:
     - parts the leaves of a flowering plant
+    - gently separates the leaves of a flowering plant
   alternate_hand_other:
     - gently loosens the soil around a root
+    - carefully works the soil loose around a weed
   alternate_apron_pose:
     - folds over her lap
+    - settles in soft folds over her lap
   alternate_movement:
     - careful and deliberate
+    - slow and precise
   person1_identity:
     - ${maid_role} ${maid_age}
+    - ${maid_role}, ${maid_age}
   person1_hair:
     - ${hair_main} with ${hair_bangs}
+    - ${hair_main} and ${hair_bangs}
   person1_eyes:
     - ${eyes_main}
+    - ${eyes_main} beneath softly curved brows
   person1_clothing:
     - ${dress_main} with ${apron_main} and ${headpiece_main}
+    - ${dress_main}, complemented by ${apron_main} and ${headpiece_main}
   person1:
     - >-
       The person tending the garden is ${person1_identity}, wearing ${person1_clothing}. She has ${person1_hair}
       and ${person1_eyes}. Most of her hair ${hair_fall}, while ${hair_strands} curve ${hair_strands_position}.
       Her expression is ${expression_main}, with her gaze ${gaze_direction} rather than directed at the
       viewer.
+    - >-
+      The gardener is ${person1_identity}. She wears ${person1_clothing}. She has ${person1_hair} and ${person1_eyes}.
+      Most of her hair ${hair_fall}, while ${hair_strands} curve ${hair_strands_position}. Her expression is
+      ${expression_main}, her gaze ${gaze_direction} as she works.
   time:
     - >-
       It is ${time_main}, and ${sunlight_main} reaches across the garden. The sky is ${sky_brightness}
       to show the colours of the flowers, but the shaded ground has begun to take on ${shade_palette}.
+    - >-
+      It is ${time_main}. The garden is crossed by ${sunlight_main}, and the sky remains ${sky_brightness}
+      to reveal the flowers' colours. In the shaded areas, the ground has begun to take on ${shade_palette}.
   place:
     - >-
       In ${garden_corner} of ${garden_main}, ${path_main} curves around ${flower_bed_main} bordered by
       ${hedge_main}. The mansion is ${mansion_position}, ${mansion_distance} and ${mansion_cover}. ${basket_main}
       rests ${basket_position}, ${basket_reach} of the person tending it.
+    - >-
+      In ${garden_corner} of ${garden_main}, ${path_main} bends around ${flower_bed_main}, bordered by
+      ${hedge_main}. Farther back, the mansion is ${mansion_position}, ${mansion_distance} and ${mansion_cover}.
+      ${basket_main} rests ${basket_position}, ${basket_reach} of the person working there.
   action:
     - >-
       She ${pose_main} and ${pose_lean} to ${work_main} ${work_position}. One hand ${hand_primary_action}
       while the other ${hand_other_action}, ${plant_care}. ${weed_details} lie in the basket. Her skirt
       ${skirt_pose}, and ${apron_edge} brushes the grass. ${soil_details} make the task feel ${work_mood}.
+    - >-
+      Beside the flowers, she ${pose_main} and ${pose_lean} to ${work_main} ${work_position}. One hand
+      ${hand_primary_action}, while the other ${hand_other_action}, ${plant_care}. ${weed_details} lie in the
+      basket. Her skirt ${skirt_pose} while ${apron_edge} brushes the grass. ${soil_details} make her
+      work feel ${work_mood}.
   composition:
     - >-
       The view is ${camera_position}, showing ${camera_contents} in the same frame. Her figure ${figure_position},
       while ${path_leading_line} leads ${background_destination}. ${foreground_foliage} give the garden
       depth without obscuring her hands or expression.
+    - >-
+      Seen ${camera_position}, the scene includes ${camera_contents}. Her figure ${figure_position}, and
+      ${path_leading_line} leads ${background_destination}. ${foreground_foliage} add depth while leaving
+      her face and hands clearly visible.
   dessin:
     - >-
       The scene is ${medium_main} with ${eye_drawing}, ${hand_drawing} and ${linework_main}. ${shape_design}
       define the figure, while smaller details are reserved for ${detail_subjects}. ${shading_main} gives
       the clothing and hair volume without making the image look photographic.
+    - >-
+      The image is ${medium_main}, combining ${eye_drawing}, ${hand_drawing} and ${linework_main}. ${shape_design}
+      establish the figure, while finer accents describe ${detail_subjects}. ${shading_main} models her hair
+      and clothing while preserving the illustrated appearance.
   effects:
     - >-
       ${light_main} catches ${light_on_hair} and ${light_on_apron}. The hedge casts ${shadow_main} across
       the path, and ${light_pattern} break up the grass around her. The distant mansion is slightly less
       detailed than the foreground, keeping attention on ${focus_target}. The overall mood is ${mood_main},
       like ${mood_comparison}.
+    - >-
+      ${light_main} catches ${light_on_hair} and ${light_on_apron}. Across the path, the hedge casts ${shadow_main},
+      and ${light_pattern} break up the grass around her. The distant mansion is drawn with fewer details,
+      directing attention to ${focus_target}. The atmosphere feels ${mood_main}, like ${mood_comparison}.
 profiles:
   red_dress:
     variables:
       dress_main:
         - a red one-piece dress
+        - a red dress with a fitted bodice and a softly gathered skirt
   alternate_action:
     variables:
       action:
         - >-
-          She ${alternate_pose}, ${alternate_inspection} before removing them. With one hand she ${alternate_hand_primary};
-          with the other she ${alternate_hand_other}. The basket beside her already holds a few weeds.
+          She ${alternate_pose}, ${alternate_inspection} before removing them. With one hand she ${alternate_hand_primary},
+          and with the other she ${alternate_hand_other}. The basket beside her already holds a few weeds.
           Her apron ${alternate_apron_pose}, and a loose strand of ${hair_colour} hair has slipped forward
           as she bends toward the ground. Her movements are ${alternate_movement}, preserving the flowers
           around her.
+        - >-
+          Beside the flowers she ${alternate_pose}, ${alternate_inspection} before pulling them out. One
+          hand ${alternate_hand_primary}, while the other ${alternate_hand_other}. A few weeds already
+          lie in the basket. Her apron ${alternate_apron_pose}, and a strand of ${hair_colour} hair falls
+          forward as she bends down. Her movements are ${alternate_movement}, taking care of the nearby
+          flowers.

@@ -2,7 +2,7 @@
 # Offline: python cp2.py examples/natural-language-spatial.yaml --output outputs/natural-language-spatial.json
 # Mirrored layout: add --profile abc_left_to_right (hand assignments stay unchanged).
 #
-# Default, from the viewer's RIGHT to LEFT: A / Aria, B / Bram, C / Celia.
+# Default, from the viewer's RIGHT to LEFT: A (Aria/Elena), B (Bram/Cedric), C (Celia/Livia).
 # All three face the viewer. "Right hand" always means that person's own right hand.
 # A's sword therefore appears to the left of A's torso; her shield appears to its right.
 # YAML variable names and A/B/C are authoring identifiers, not image labels.
@@ -11,6 +11,9 @@
 # Phrase variables come first; sentence/paragraph templates follow them.
 # Replace a whole phrase, not individual words: e.g. hair_main = long brown hair.
 # Keep the same noun number, grammatical role and viewpoint for alternatives.
+# Every variable has two candidates; grammatical roles and fixed relationships are preserved.
+# Each referenced variable is selected once per output, including repeated names and colours.
+# Do not put raw semicolons in variable text: they delimit columns in the prompt reader.
 version: 2
 options:
   json: true
@@ -36,156 +39,234 @@ command:
 variables:
   scene_medium:
     - An anime-style illustration
+    - An anime-inspired illustration
   scene_group:
     - three adult travellers
+    - a group of three adult travellers
   scene_ground:
     - on the same stone terrace
+    - on a broad stone terrace
   scene_gate_position:
     - outside a small castle gate
+    - just outside a small castle gate
   scene_time:
     - at sunset
+    - in the last light of the day
   frame_extent:
     - from head to toe
+    - from their heads down to their boots
   background_wall:
     - a low parapet behind them
+    - a low stone parapet behind them
   background_gate:
     - the open gate farther in the background
+    - the open castle gate farther behind the group
   group_formation:
     - a single row
+    - one clearly spaced row
   group_facing:
     - face directly toward the viewer
+    - look straight toward the viewer
   group_separation:
     - Small gaps
+    - Narrow but visible gaps
   separated_parts:
     - each person's hands, clothing and belongings
+    - each traveller's hands, clothes and belongings
   person_a_identity:
     - a young woman
+    - an adult woman in her twenties
   person_a_hair:
     - short auburn hair
+    - cropped auburn hair
   person_a_tabard:
     - a red tabard
+    - a crimson tabard
   person_a_armour:
     - fitted silver armour
+    - closely fitted silver armour
   person_a_arm_position:
     - hangs slightly away from her body
+    - rests a little away from her torso
   person_a_sword_direction:
     - pointing diagonally downward
+    - angled downward
   person_a_sword_target:
     - toward a clear patch of stone
+    - toward an empty space on the terrace
   person_a_shield_position:
     - in front of the left side of her waist
+    - just ahead of the left side of her waist
   person_a_visible_parts:
     - Her face, sword hand and shield grip
+    - Her expression, sword hand and grip on the shield
   person_b_identity:
     - a broad-shouldered man
+    - a sturdy adult man
   person_b_hair:
     - dark curly hair
+    - short, dark curls
   person_b_beard:
     - a short beard
+    - a neatly trimmed beard
   person_b_coat:
     - a brown travelling coat
+    - a weathered brown travelling coat
   person_b_shirt:
     - a cream shirt
+    - a simple cream-coloured shirt
   person_b_map:
     - an unfolded parchment map
+    - an open parchment map
   person_b_hand_assignment:
     - in both hands
+    - with both hands
   person_b_map_height:
     - at chest height
+    - at the height of his chest
   person_b_map_grip:
     - grip opposite edges of the map
+    - hold the two outer edges of the map
   person_b_face_visibility:
     - visible above the top edge of the parchment
+    - clearly visible over the upper edge of the map
   person_c_identity:
     - a tall woman
+    - a tall adult woman
   person_c_hair:
     - long pale-blonde hair
+    - long, loosely flowing pale-blonde hair
   person_c_cloak:
     - a deep-${person_c_cloak_colour} cloak
+    - a dark ${person_c_cloak_colour} cloak
   person_c_cloak_colour:
     - blue
+    - green
   person_c_dress:
     - a plain dark travelling dress
+    - a simple dark dress suited to travelling
   person_c_staff:
     - a wooden staff
+    - a plain wooden staff
   person_c_staff_orientation:
     - upright
+    - vertically
   person_c_hand_assignment:
     - in her own right hand
+    - with her own right hand
   person_c_staff_position:
     - beside her right boot
+    - next to her right boot
   person_c_free_hand_position:
     - open at waist height
+    - open near her waist
   person_c_free_hand_gesture:
     - a small conversational gesture
+    - a restrained conversational gesture
   body_reference_facing:
     - face forward
+    - stand facing the viewer
   body_reference_right:
     - each person's own right hand
+    - the right hand of each traveller
   body_reference_screen:
     - on the viewer's left side of that person's body
+    - on the left of that traveller's body as seen by the viewer
   group_middle_relation:
     - between the two women
+    - in the space between the two women
   group_foot_alignment:
     - on the same line of paving stones
+    - along the same row of paving stones
   prop_ownership_space:
     - within their owners' immediate space
+    - close to the people holding them
   figure_gaps:
     - clear gaps between the figures
+    - unobstructed gaps between the three silhouettes
   gate_layer:
     - behind the group
+    - behind the three travellers
   terrace_layer:
     - across the foreground
+    - across the lower part of the image
   linework_main:
     - Clean anime linework
+    - Precise anime linework
   shading_main:
     - restrained cel shading
+    - soft cel shading
   detail_focus:
     - the hands and the objects they hold
+    - the hands and their separate belongings
   viewpoint_height:
     - at chest height
+    - level with the travellers' chests
   frame_contents:
     - the complete sword blade, shield, map, staff and all three pairs of boots
+    - the entire sword blade, the shield, the map, the staff and every pair of boots
   light_main:
     - Warm sunset light
+    - Low evening light
   light_origin:
     - from the upper left of the image
+    - from the top-left corner of the scene
   light_surfaces:
     - the edges of the armour and the folds of the ${person_c_cloak_colour} cloak
+    - the rims of the armour and the creases of the ${person_c_cloak_colour} cloak
   shadows_main:
     - Soft shadows
+    - Gentle shadows
   shadow_direction:
     - toward the lower right
+    - toward the bottom-right corner
   background_detail:
     - less detailed than the travellers
+    - rendered more simply than the travellers
   readability_target:
     - the three faces and their separate silhouettes
+    - the three expressions and their distinct outlines
   person_a_name:
     - Aria
+    - Elena
   person_b_name:
     - Bram
+    - Cedric
   person_c_name:
     - Celia
+    - Livia
   person_a_position:
     - on the right side of the image
+    - on the viewer's right
   person_b_position:
     - in the centre of the image
+    - in the middle of the image
   person_c_position:
     - on the left side of the image
+    - on the viewer's left
   person_a_right_hand:
     - a straight steel sword
+    - a polished steel sword
   person_a_left_hand:
     - a round wooden shield with a steel rim
+    - a round wooden shield reinforced with a steel rim
   scene:
     - >-
       ${scene_medium} shows ${scene_group} standing ${scene_ground} ${scene_gate_position} ${scene_time}.
       The terrace is wide enough for all three to be seen ${frame_extent}, with ${background_wall} and
       ${background_gate}.
+    - >-
+      ${scene_medium} depicts ${scene_group} standing ${scene_ground} ${scene_gate_position} ${scene_time}.
+      Each traveller can be seen ${frame_extent}. There is ${background_wall}, with ${background_gate}.
   layout:
     - >-
       ${person_a_name} stands ${person_a_position}, ${person_b_name} stands ${person_b_position}, and
       ${person_c_name} stands ${person_c_position}. They form ${group_formation} and ${group_facing}.
       ${group_separation} separate their silhouettes, so ${separated_parts} can be distinguished.
+    - >-
+      ${person_a_name} is ${person_a_position}, ${person_b_name} is ${person_b_position}, and ${person_c_name}
+      is ${person_c_position}. They stand in ${group_formation} and ${group_facing}. ${group_separation}
+      divide their silhouettes, making ${separated_parts} easy to distinguish.
   person_a:
     - >-
       ${person_a_name} is ${person_a_identity} with ${person_a_hair} and ${person_a_tabard} worn over
@@ -193,12 +274,23 @@ variables:
       Her right arm ${person_a_arm_position}, with the sword ${person_a_sword_direction} ${person_a_sword_target}.
       Her left elbow is bent, bringing the shield ${person_a_shield_position}. ${person_a_visible_parts}
       are visible.
+    - >-
+      ${person_a_name} is ${person_a_identity}. She has ${person_a_hair} and wears ${person_a_tabard}
+      over ${person_a_armour}. Her right hand holds ${person_a_right_hand}, while her left hand grips
+      ${person_a_left_hand}. Her right arm ${person_a_arm_position}, the sword ${person_a_sword_direction}
+      ${person_a_sword_target}. With her left elbow bent, she holds the shield ${person_a_shield_position}.
+      ${person_a_visible_parts} are unobstructed.
   person_b:
     - >-
       ${person_b_name} is ${person_b_identity} with ${person_b_hair}, ${person_b_beard} and ${person_b_coat}
       over ${person_b_shirt}. He holds ${person_b_map} ${person_b_hand_assignment} ${person_b_map_height}.
       His fingers ${person_b_map_grip}, and its lower corners curl gently toward his coat. His head is
       raised, allowing his face to remain ${person_b_face_visibility}.
+    - >-
+      ${person_b_name} is ${person_b_identity}, with ${person_b_hair} and ${person_b_beard}. He wears
+      ${person_b_coat} over ${person_b_shirt}. He holds ${person_b_map} ${person_b_hand_assignment} ${person_b_map_height}.
+      His fingers ${person_b_map_grip}, while the lower corners curl toward his coat. He keeps his head up and
+      his face ${person_b_face_visibility}.
   person_c:
     - >-
       ${person_c_name} is ${person_c_identity} with ${person_c_hair}, ${person_c_cloak} and ${person_c_dress}.
@@ -206,25 +298,46 @@ variables:
       lower end resting on the terrace ${person_c_staff_position}. Her left hand is ${person_c_free_hand_position}
       in ${person_c_free_hand_gesture}. The staff belongs to her and remains beside her body, clearly
       separate from the sword and shield carried by ${person_a_name}.
+    - >-
+      ${person_c_name} is ${person_c_identity}, with ${person_c_hair}. She wears ${person_c_cloak} over
+      ${person_c_dress} and holds ${person_c_staff} ${person_c_staff_orientation} ${person_c_hand_assignment}.
+      Its lower end rests on the stone ${person_c_staff_position}. Her left hand is ${person_c_free_hand_position}
+      in ${person_c_free_hand_gesture}. The staff remains beside her body and is clearly distinct from
+      the sword and shield belonging to ${person_a_name}.
   spatial_details:
     - >-
       Because they ${body_reference_facing}, ${body_reference_right} appears ${body_reference_screen}.
       ${person_b_name} stands ${group_middle_relation}, with all three pairs of feet resting ${group_foot_alignment}.
       The weapons, staff and map stay ${prop_ownership_space}, leaving ${figure_gaps}. The castle gate
       rises ${gate_layer}, while the terrace continues ${terrace_layer}.
+    - >-
+      All three ${body_reference_facing}, so ${body_reference_right} appears ${body_reference_screen}.
+      ${person_b_name} stands ${group_middle_relation}. Their feet are aligned ${group_foot_alignment}.
+      The weapons, map and staff stay ${prop_ownership_space}, preserving ${figure_gaps}. The gate stands
+      ${gate_layer}, and the terrace extends ${terrace_layer}.
   dessin:
     - >-
       ${linework_main} and ${shading_main} define the figures, with particular attention to ${detail_focus}.
       The viewpoint is ${viewpoint_height}, and the framing includes ${frame_contents}.
+    - >-
+      ${linework_main} combines with ${shading_main}, giving particular clarity to ${detail_focus}. The
+      viewpoint is ${viewpoint_height}. The composition includes ${frame_contents}, leaving each object
+      fully readable.
   effects:
     - >-
       ${light_main} enters ${light_origin}, tracing ${light_surfaces}. ${shadows_main} fall across the
       stone ${shadow_direction}. The distant gate is ${background_detail}, keeping ${readability_target}
       easy to read.
+    - >-
+      ${light_main} enters ${light_origin} and outlines ${light_surfaces}. ${shadows_main} stretch over
+      the paving ${shadow_direction}. The gate in the distance is ${background_detail}, leaving ${readability_target}
+      easy to distinguish.
 profiles:
   abc_left_to_right:
     variables:
       person_a_position:
         - on the left side of the image
+        - on the viewer's left
       person_c_position:
         - on the right side of the image
+        - on the viewer's right
