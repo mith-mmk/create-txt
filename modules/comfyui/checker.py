@@ -264,6 +264,12 @@ class WorkflowChecker:
             missing_required = []
             for key in required:
                 if key not in inputs:
+                    definition = required[key]
+                    if (len(definition) > 1 and definition[0] == "COMFY_AUTOGROW_V3"
+                            and definition[1].get("template", {}).get("min", 1) == 0):
+                        # V3 expands this container into optional named inputs;
+                        # no references is valid for txt2img.
+                        continue
                     missing_required.append(key)
                     self._add_issue(
                         issues, node_id, class_type, f"required input '{key}' not found"

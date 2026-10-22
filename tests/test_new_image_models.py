@@ -166,3 +166,33 @@ def test_neo_scheduler_script_registers_once_and_uses_fixed_sigmas(monkeypatch):
     assert fn(8, 0, 1, "cpu") == (1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0.0)
     with pytest.raises(ValueError, match="8 steps"):
         fn(20, 0, 1, "cpu")
+
+
+@pytest.mark.parametrize("minimum,valid", [(0, True), (1, False)])
+def test_checker_handles_empty_v3_autogrow(minimum, valid):
+    checker = WorkflowChecker()
+    checker.object_info = {"object_info": {
+        "TextEncodeQwenImage21": {"input": {"required": {
+            "clip": ["CLIP"], "prompt": ["STRING"], "negative_prompt": ["STRING"],
+            "resolution": ["INT"], "images": ["COMFY_AUTOGROW_V3", {"template": {"min": minimum}}],
+        }}},
+        "CLIPLoader": {"input": {"required": {}}},
+        "Output": {"output_node": True, "input": {"required": {"conditioning": ["CONDITIONING"]}}},
+    }}
+    workflow = {
+        "1": {"class_type": "CLIPLoader", "inputs": {"clip_name": "encoder", "type": "qwen_image"}},
+        "2": {"class_type": "TextEncodeQwenImage21", "inputs": {
+            "clip": ["1", 0], "prompt": "test", "negative_prompt": "", "resolution": 1024,
+        }},
+        "3": {"class_type": "Output", "inputs": {"conditioning": ["2", 0]}},
+    }
+    checked, _ = checker.check(workflow, "unused")
+    assert (checked is not None) is valid
+
+
+def test_comfy_rejects_all_invalid_workflows(monkeypatch):
+    from modules.comfyui import ComufyClient
+
+    monkeypatch.setattr(ComufyClient, "checkWorkflow", lambda *a, **k: (None, None))
+    monkeypatch.setattr(ComufyClient, "run", lambda *a, **k: pytest.fail("invalid workflow submitted"))
+    assert ComufyClient.txt2img([{"workflow": {"1": {"class_type": "Missing", "inputs": {}}}}]) is False

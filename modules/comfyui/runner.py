@@ -327,6 +327,9 @@ class ComufyClient:
                     )
                     if seed > 0:
                         seed += info.get("batch_size", 1)
+            if not workflows:
+                printError("No valid ComfyUI workflows to execute")
+                return False
             options = dict(options)
             options["dir"] = output_dir
             client.run(workflows, options)
