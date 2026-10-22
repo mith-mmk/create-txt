@@ -731,6 +731,45 @@ Qwen 2.1 Turboはチェックポイント名から`qwen-image-2.1-turbo`と判�
 ComfyUI Turboのdenoiseは1が必要です。別スケジュールにはtemplateを使ってください。
 公式Turboチェックポイント用であり、第三者のTurbo LoRA用設定ではありません。
 
+#### Neo・ComfyUIで確認済みの実行例
+
+2026-10-22にForge Neo（`neo-2.31`）とComfyUI **0.42.0**で、3モデルすべての
+txt2img生成・クライアント側PNG保存を確認しました。各テストは512×512、seed 41006、
+`examples/qwen21-moss.yaml`のプロンプトを使用しています。
+
+| profile | チェックポイント | Steps / CFG | スケジュール |
+| --- | --- | --- | --- |
+| moss | moss_image_sft_int8_convrot.safetensors | 50 / 3 | Euler / Simple |
+| qwen21 | qwen_image_2.1_int8_convrot.safetensors | 32 / 2.5 | Euler / Simple |
+| qwen21-turbo | qwen_image_2.1_turbo_int8_convrot.safetensors | 8 / 1 | Euler / Turbo固定sigma列 |
+
+実環境のMOSSは`flux2-vae.safetensors`と`qwen3.5_9b_w4a8_gptq.safetensors`、
+Qwen両版は`qwen_image_2.1_vae_bf16.safetensors`と`qwen3vl_8b_w4a8.safetensors`を使いました。
+例のYAMLとは一部のファイル名が異なるため、以下ではCLIで上書きしています。
+ほかのprofile設定はそのまま適用されます。Neoで`--text-encoder`だけを変更しても、
+profileのVAE指定は維持されます。
+
+Forge Neo（3番目のコマンドの前に、上記Turbo用スケジューラーを導入してください）:
+
+~~~sh
+python cp2.py examples/qwen21-moss.yaml --profile moss --api-mode --api-base http://localhost:7860 --api-set-sd-vae flux2-vae.safetensors --override width=512,height=512 --api-output-dir ./outputs/neo-moss
+python cp2.py examples/qwen21-moss.yaml --profile qwen21 --api-mode --api-base http://localhost:7860 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/neo-qwen21
+python cp2.py examples/qwen21-moss.yaml --profile qwen21-turbo --api-mode --api-base http://localhost:7860 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/neo-qwen21-turbo
+~~~
+
+ComfyUI 0.42.0以降（Turboの固定sigma用ノードは自動構築します）:
+
+~~~sh
+python cp2.py examples/qwen21-moss.yaml --profile moss --comfy --ui-type comfy --api-base http://127.0.0.1:8188 --api-set-sd-vae flux2-vae.safetensors --override width=512,height=512 --api-output-dir ./outputs/comfy-moss
+python cp2.py examples/qwen21-moss.yaml --profile qwen21 --comfy --ui-type comfy --api-base http://127.0.0.1:8188 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/comfy-qwen21
+python cp2.py examples/qwen21-moss.yaml --profile qwen21-turbo --comfy --ui-type comfy --api-base http://127.0.0.1:8188 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/comfy-qwen21-turbo
+~~~
+
+ComfyUIのQwenエンコーダーはV3可変入力として参照画像0件を許容します。
+クライアントもこのtxt2img設定を受け付け、検証後に実行可能なworkflowが0件なら失敗を返します。
+関連回帰テストは**153件通過**しました。今回の実生成確認はtxt2imgのみです。
+img2img、マスク、参照編集、別解像度は、このテストでは未検証です。
+
 | YAMLのoptions | CLI | 用途 |
 | --- | --- | --- |
 | image | --image | img2imgの初期画像 |

@@ -737,6 +737,48 @@ before submitting a Turbo request and selects it even if a generic UI profile
 sets Simple. ComfyUI Turbo requires denoise=1; use a template for other schedules.
 This profile targets the official Turbo checkpoint, not third-party Turbo LoRAs.
 
+#### Verified Neo and ComfyUI commands
+
+On 2026-10-22, all three models completed txt2img generation and client-side PNG
+saving on Forge Neo (`neo-2.31`) and ComfyUI **0.42.0**. Each test used 512x512,
+seed 41006 and the prompt from `examples/qwen21-moss.yaml`.
+
+| Profile | Checkpoint | Steps / CFG | Schedule |
+| --- | --- | --- | --- |
+| moss | moss_image_sft_int8_convrot.safetensors | 50 / 3 | Euler / Simple |
+| qwen21 | qwen_image_2.1_int8_convrot.safetensors | 32 / 2.5 | Euler / Simple |
+| qwen21-turbo | qwen_image_2.1_turbo_int8_convrot.safetensors | 8 / 1 | Euler / fixed Turbo sigmas |
+
+The tested MOSS installation used `flux2-vae.safetensors` and
+`qwen3.5_9b_w4a8_gptq.safetensors`. Both Qwen profiles used
+`qwen_image_2.1_vae_bf16.safetensors` and `qwen3vl_8b_w4a8.safetensors`.
+These encoder/VAE filenames differ from some defaults in the example YAML;
+the following CLI overrides select the tested files while retaining the other
+profile settings. On Neo, overriding only `--text-encoder` preserves the
+profile's VAE selection.
+
+Forge Neo (install the Turbo scheduler script above before the third command):
+
+~~~sh
+python cp2.py examples/qwen21-moss.yaml --profile moss --api-mode --api-base http://localhost:7860 --api-set-sd-vae flux2-vae.safetensors --override width=512,height=512 --api-output-dir ./outputs/neo-moss
+python cp2.py examples/qwen21-moss.yaml --profile qwen21 --api-mode --api-base http://localhost:7860 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/neo-qwen21
+python cp2.py examples/qwen21-moss.yaml --profile qwen21-turbo --api-mode --api-base http://localhost:7860 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/neo-qwen21-turbo
+~~~
+
+ComfyUI 0.42.0+ (the built-in compiler supplies Turbo's fixed sigma nodes):
+
+~~~sh
+python cp2.py examples/qwen21-moss.yaml --profile moss --comfy --ui-type comfy --api-base http://127.0.0.1:8188 --api-set-sd-vae flux2-vae.safetensors --override width=512,height=512 --api-output-dir ./outputs/comfy-moss
+python cp2.py examples/qwen21-moss.yaml --profile qwen21 --comfy --ui-type comfy --api-base http://127.0.0.1:8188 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/comfy-qwen21
+python cp2.py examples/qwen21-moss.yaml --profile qwen21-turbo --comfy --ui-type comfy --api-base http://127.0.0.1:8188 --text-encoder qwen3vl_8b_w4a8.safetensors --override width=512,height=512 --api-output-dir ./outputs/comfy-qwen21-turbo
+~~~
+
+ComfyUI's Qwen text encoder allows zero reference images through its V3 dynamic
+input schema. The client accepts that txt2img configuration and returns failure
+if workflow validation leaves no executable workflows. The related regression
+suite passed **153 tests**. These live results cover txt2img only; img2img, masks,
+reference editing and other resolutions were not exercised in this test run.
+
 | YAML option | CLI | Purpose |
 | --- | --- | --- |
 | image | --image | Initial img2img image |
