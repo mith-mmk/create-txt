@@ -681,6 +681,7 @@ Derived families inherit the settings of their parent in the order shown.
 | lumina | neta-lumina, netayume-lumina |
 | qwen-image | qwen-image-edit |
 | qwen-image-2.1 | Qwen Image 2.1 (aliases: qwen-image2.1, qwen21) |
+| qwen-image-2.1-turbo | Inherits qwen-image-2.1 (aliases: qwen-image2.1-turbo, qwen21-turbo) |
 | moss | MOSS-Image Base/SFT (alias: moss-image) |
 | z-image | z-image-turbo |
 | anima | anima_2b, anima_2.9b, anima_3.8b, anima-edit |
@@ -724,6 +725,17 @@ is not accepted by the built-in compiler. MOSS has no reference-edit switch.
 
 Node/file contracts follow the official [Qwen 2.1 workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_qwen_image_2_1_t2i.json)
 and [MOSS workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_moss_image_t2i.json).
+
+Qwen 2.1 Turbo checkpoint names select `qwen-image-2.1-turbo`, applying the
+base profile first and the Turbo profile second. Use `--profile qwen21-turbo`
+with the example YAML. The official distilled checkpoint uses **8 steps, CFG 1**
+and fixed sigmas, not the ordinary Simple schedule. ComfyUI uses `ManualSigmas`
+and `SamplerCustomAdvanced` automatically. For Neo, copy
+[neo-qwen21-turbo-scheduler.py](examples/neo-qwen21-turbo-scheduler.py) to the
+server's `scripts/` directory and restart. The client checks for this scheduler
+before submitting a Turbo request and selects it even if a generic UI profile
+sets Simple. ComfyUI Turbo requires denoise=1; use a template for other schedules.
+This profile targets the official Turbo checkpoint, not third-party Turbo LoRAs.
 
 | YAML option | CLI | Purpose |
 | --- | --- | --- |

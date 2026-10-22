@@ -289,7 +289,7 @@ ui_profile:
     ("qwen_image_edit_2509", "qwen-image-edit"), ("flux1-kontext-dev", "flux-kontext"),
     ("Qwen-Image-2.1.safetensors", "qwen-image-2.1"),
     ("qwen-image2.1-edit.safetensors", "qwen-image-2.1"),
-    ("qwen_image_2.1_turbo", "qwen-image-2.1"),
+    ("qwen_image_2.1_turbo", "qwen-image-2.1-turbo"),
     ("qwen_image21", "qwen-image-2.1"),
     ("qwen-image-2.0", "qwen-image-2.0"),
     ("qwen-image-2.10", "qwen-image"),
@@ -303,6 +303,18 @@ ui_profile:
 ])
 def test_model_names(name, expected):
     assert infer_model_type(name) == expected
+
+
+def test_qwen21_turbo_inherits_base_modules():
+    yml = {"options": {"model_type": "qwen21-turbo"}, "model_profile": {
+        "qwen-image2.1": {"options": {"vae": "base-vae", "text_encoder": "base-encoder"},
+                           "command": {"steps": 32, "cfg_scale": 2.5}},
+        "qwen-image-2.1-turbo": {"command": {"steps": 8, "cfg_scale": 1}},
+    }}
+    ctx = apply_generation_profiles(yml, {})
+    assert ctx["applied_profiles"] == ["model_profile.qwen-image-2.1", "model_profile.qwen-image-2.1-turbo"]
+    assert yml["options"]["vae"] == "base-vae"
+    assert yml["command"] == {"steps": 8, "cfg_scale": 1}
 
 
 def test_pony_inherits_sdxl():

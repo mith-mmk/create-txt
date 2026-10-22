@@ -6,6 +6,8 @@ import re
 
 import yaml
 
+QWEN21_TURBO_SIGMAS = "1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0"
+
 try:
     from modules.logger import getDefaultLogger
 
@@ -81,6 +83,10 @@ class WorkflowBuilderCore:
 
 
 def _family_defaults(family):
+    if family == "qwen-image-2.1-turbo":
+        result = _family_defaults("qwen-image-2.1")
+        result.update(steps=8, cfg=1.0)
+        return result
     defaults = {
         "sd15": {
             "width": 512,
@@ -179,6 +185,8 @@ def _normalize_family_mode(options):
         "anima": "anima",
         "qwen-image2.1": "qwen-image-2.1",
         "qwen21": "qwen-image-2.1",
+        "qwen21-turbo": "qwen-image-2.1-turbo",
+        "qwen-image2.1-turbo": "qwen-image-2.1-turbo",
         "moss-image": "moss",
     }
     family = aliases.get(family, family)
@@ -584,7 +592,7 @@ class ComfyUIWorkflowCompiler:
             core, model_ref, clip_ref, negative_chain
         )
 
-        if spec["family"] == "qwen-image-2.1":
+        if spec["family"] in {"qwen-image-2.1", "qwen-image-2.1-turbo"}:
             # This encoder produces both conditionings in one call (ports 0/1).
             # Separate calls retain the positive/negative LoRA chains.
             def encode_qwen(text, negative, clip, role):
@@ -644,7 +652,23 @@ class ComfyUIWorkflowCompiler:
                 "steps": info["steps"],
             },
         )
-        sampler_ref = core.add_node(sampler_class, sampler_inputs, role="sampler")
+        if spec["family"] == "qwen-image-2.1-turbo":
+            if info["steps"] != 8 or info["denoising_strength"] != 1:
+                raise ValueError("Qwen Image 2.1 Turbo requires 8 steps and denoise=1 for its fixed sigma schedule")
+            if "sampler" in spec.get("nodes", {}):
+                raise ValueError("Qwen Image 2.1 Turbo custom sampler overrides require a workflow template")
+            info["scheduler"] = "qwen21_turbo"
+            sigmas = core.add_node("ManualSigmas", {"sigmas": QWEN21_TURBO_SIGMAS}, role="sigmas")
+            noise = core.add_node("RandomNoise", {"noise_seed": seed}, role="noise")
+            guider = core.add_node("CFGGuider", {"model": pos_model, "positive": positive_ref,
+                                               "negative": negative_ref, "cfg": info["cfg_scale"]}, role="guider")
+            sampler = core.add_node("KSamplerSelect", {"sampler_name": info["sampler_name"]}, role="sampler_select")
+            sampler_ref = core.add_node("SamplerCustomAdvanced", {
+                "noise": noise, "guider": guider, "sampler": sampler,
+                "sigmas": sigmas, "latent_image": latent_ref,
+            }, role="sampler")
+        else:
+            sampler_ref = core.add_node(sampler_class, sampler_inputs, role="sampler")
         decode_class, decode_inputs = _merge_node_definition(
             spec,
             "vae_decode",

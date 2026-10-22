@@ -32,6 +32,7 @@ MODEL_PARENTS = {
     "qwen-image-edit": "qwen-image",
     "qwen-image-2.0": None,
     "qwen-image-2.1": None,
+    "qwen-image-2.1-turbo": "qwen-image-2.1",
     "z-image": None,
     "z-image-turbo": "z-image",
     "anima": None,
@@ -65,6 +66,8 @@ MODEL_ALIASES = {
     "qwen21": "qwen-image-2.1",
     "qwen-image2.1": "qwen-image-2.1",
     "qwen_image_2.1": "qwen-image-2.1",
+    "qwen21-turbo": "qwen-image-2.1-turbo",
+    "qwen-image2.1-turbo": "qwen-image-2.1-turbo",
     "noob-ai": "noobai",
     "flux1": "flux",
     "sd3": "sd35",
@@ -126,7 +129,7 @@ def infer_model_type(name):
         return family + "-edit" if "edit" in name else family
     if "qwen" in name and ("image" in name or "edit" in name):
         if re.search(r"qwen[\s_.-]*image[\s_.-]*2[._]?1(?:[^0-9]|$)", name):
-            return "qwen-image-2.1"
+            return "qwen-image-2.1-turbo" if "turbo" in name else "qwen-image-2.1"
         if re.search(r"qwen[\s_.-]*image[\s_.-]*2[._]0(?:[^0-9]|$)", name):
             return "qwen-image-2.0"
         return "qwen-image-edit" if "edit" in name else "qwen-image"

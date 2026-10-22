@@ -1,6 +1,8 @@
 # Change model/encoder/VAE filenames to match files installed on your server.
 # Neo: python cp2.py examples/qwen21-moss.yaml --profile qwen21 --api-mode
 # Neo: python cp2.py examples/qwen21-moss.yaml --profile moss --api-mode
+# Turbo: use --profile qwen21-turbo; Neo requires neo-qwen21-turbo-scheduler.py
+# copied into the server's scripts/ directory, followed by a restart.
 # ComfyUI 0.42+: add --comfy --ui-type comfy --api-base http://localhost:8188
 # instead of --api-mode. An explicit --comfy-family overrides model_type.
 # Ordinary img2img: add --image input.png (Neo also needs --api-type img2img).
@@ -20,6 +22,10 @@ profiles:
     options:
       model: moss_image_sft_int8_convrot.safetensors
       model_type: moss-image
+  qwen21-turbo:
+    options:
+      model: qwen_image_2.1_turbo_int8_convrot.safetensors
+      model_type: qwen-image-2.1-turbo
 command:
   prompt: a red ceramic teapot on a wooden table, daylight
   negative_prompt: blurry
@@ -41,6 +47,10 @@ model_profile:
     command:
       steps: 50
       cfg_scale: 3.0
+  qwen-image-2.1-turbo:
+    command:
+      steps: 8
+      cfg_scale: 1
 ui_profile:
   neo:
     command:

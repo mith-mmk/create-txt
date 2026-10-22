@@ -209,9 +209,30 @@ def prepare_payloads(payloads, opt, mode, context=None):
             raise ValueError("Forge Neo server lacks ImageStitch Integrated for this mode")
     available_modules = None
     available_models = server.get("models")
+    turbo_scheduler = None
+    if ui == "neo" and model_type == "qwen-image-2.1-turbo":
+        schedulers = get_json(base_url, "/sdapi/v1/schedulers", userpass)
+        turbo_scheduler = next((s.get("label") or s.get("name") for s in schedulers
+                                if s.get("name") == "qwen21_turbo" or
+                                s.get("label") == "Qwen Image 2.1 Turbo"), None)
+        if turbo_scheduler is None:
+            raise ValueError("Qwen Image 2.1 Turbo requires its fixed sigma scheduler on Neo; copy examples/neo-qwen21-turbo-scheduler.py to Neo scripts/ and restart")
     result = []
     for original in payloads:
         item = copy.deepcopy(original)
+        if turbo_scheduler:
+            item.setdefault("steps", 8)
+            item.setdefault("cfg_scale", 1.0)
+            item.setdefault("sampler_name", "Euler")
+            # A generic UI profile may have selected Simple; Turbo needs its
+            # checkpoint-specific schedule after all profiles are applied.
+            item["scheduler"] = turbo_scheduler
+            if item["steps"] != 8:
+                raise ValueError("Qwen Image 2.1 Turbo requires 8 steps")
+            if mode == "img2img":
+                item.setdefault("denoising_strength", 1.0)
+                if item["denoising_strength"] != 1:
+                    raise ValueError("Qwen Image 2.1 Turbo requires denoising_strength=1 for its fixed sigma schedule")
         if opt.get("image") is not None:
             item["init_images"] = [encode_image(opt["image"])]
         elif item.get("init_images") is not None:

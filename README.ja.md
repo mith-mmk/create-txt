@@ -679,6 +679,7 @@ model_profileを省略します。オフライン生成ではAPIへ接続せず�
 | lumina | neta-lumina、netayume-lumina |
 | qwen-image | qwen-image-edit |
 | qwen-image-2.1 | Qwen Image 2.1（別名 qwen-image2.1、qwen21） |
+| qwen-image-2.1-turbo | qwen-image-2.1を継承（別名 qwen-image2.1-turbo、qwen21-turbo） |
 | moss | MOSS-Image Base/SFT（別名 moss-image） |
 | z-image | z-image-turbo |
 | anima | anima_2b、anima_2.9b、anima_3.8b、anima-edit |
@@ -719,6 +720,16 @@ ComfyUIの参照編集は専用workflow templateを指定してください。�
 
 ノード・ファイルの仕様は公式の[Qwen 2.1 workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_qwen_image_2_1_t2i.json)と
 [MOSS workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_moss_image_t2i.json)に基づきます。
+
+Qwen 2.1 Turboはチェックポイント名から`qwen-image-2.1-turbo`と判定し、
+通常の2.1 → Turboの順でprofileを適用します。例のYAMLでは`--profile qwen21-turbo`を指定します。
+公式蒸留モデルは**8 steps・CFG 1・固定sigma列**を使います。ComfyUIでは
+`ManualSigmas`と`SamplerCustomAdvanced`を自動構築します。Neoでは
+[neo-qwen21-turbo-scheduler.py](examples/neo-qwen21-turbo-scheduler.py)を
+サーバーの`scripts/`にコピーして再起動してください。送信前に専用スケジューラーの存在を確認し、
+共通UIプロファイルでSimpleが指定されていても専用スケジュールを選択します。
+ComfyUI Turboのdenoiseは1が必要です。別スケジュールにはtemplateを使ってください。
+公式Turboチェックポイント用であり、第三者のTurbo LoRA用設定ではありません。
 
 | YAMLのoptions | CLI | 用途 |
 | --- | --- | --- |

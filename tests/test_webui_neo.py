@@ -65,6 +65,21 @@ def test_qwen21_missing_edit_capability(picture, monkeypatch):
         webui.prepare_payloads([{}], {"reference_images": [picture]}, "txt2img", context("qwen-image-2.1"))
 
 
+def test_qwen21_turbo_scheduler_preflight(monkeypatch):
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [])
+    with pytest.raises(ValueError, match="fixed sigma scheduler"):
+        webui.prepare_payloads([{}], {}, "txt2img", context("qwen-image-2.1-turbo"))
+    monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
+        {"name": "qwen21_turbo", "label": "Qwen Image 2.1 Turbo"}
+    ])
+    item = webui.prepare_payloads([{"scheduler": "Simple"}], {}, "txt2img",
+                                  context("qwen-image-2.1-turbo"))[0]
+    assert item["scheduler"] == "Qwen Image 2.1 Turbo"
+    assert item["steps"] == 8 and item["cfg_scale"] == 1
+    with pytest.raises(ValueError, match="8 steps"):
+        webui.prepare_payloads([{"steps": 32}], {}, "txt2img", context("qwen-image-2.1-turbo"))
+
+
 @pytest.mark.parametrize("model", ["qwen-image-2.1", "moss"])
 def test_new_models_resolve_neo_modules(model, monkeypatch):
     monkeypatch.setattr(webui, "get_json", lambda *a, **k: [

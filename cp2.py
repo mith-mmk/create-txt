@@ -207,7 +207,7 @@ def build_parser():
         "--comfy-family",
         type=str,
         default=None,
-        choices=["sd15", "sdxl", "sd35", "flux", "anima", "qwen-image-2.1", "qwen-image2.1", "qwen21", "moss", "moss-image"],
+        choices=["sd15", "sdxl", "sd35", "flux", "anima", "qwen-image-2.1", "qwen-image2.1", "qwen21", "qwen-image-2.1-turbo", "qwen-image2.1-turbo", "qwen21-turbo", "moss", "moss-image"],
     )
     parser.add_argument("--comfy-template", type=str, default=None)
     parser.add_argument("--comfy-image", type=str, default=None)
@@ -656,7 +656,7 @@ def dispatch_comfy(args, payload, options, yml, comfy_config):
             "text_encoder": resolve_arg_or_option(args, options, "text_encoder"),
             "save_image": save_image,
             "workflow_family": comfy_config.get("family") or (
-                model_type if model_type in {"qwen-image-2.1", "moss"} else None
+                model_type if model_type in {"qwen-image-2.1", "qwen-image-2.1-turbo", "moss"} else None
             ),
             "workflow_mode": comfy_config.get("mode"),
             "workflow_template": comfy_config.get("template"),
