@@ -1,0 +1,119 @@
+# Long-form English prompt composition. Run from the repository root; no API needed.
+# python cp2.py examples/natural-language-maid.yaml --output outputs/natural-language-maid.json
+# python cp2.py examples/natural-language-maid.yaml --profile red_dress --output outputs/natural-language-maid-red.json
+# python cp2.py examples/natural-language-maid.yaml --profile alternate_action --output outputs/natural-language-maid-action.json
+#
+# Each top-level slot below is a complete sentence or paragraph, not a tag list.
+# person1 uses smaller noun phrases internally; keep their grammatical roles when replacing them.
+# time/place/action share one setting: an adult maid working outdoors in the evening.
+# "Side-swept bangs" means bangs swept to one side; it does not require covering an eye.
+# The source description names both a red dress and a black maid dress. Treat them
+# as alternate outfits: black by default, red with --profile red_dress.
+# Adding more choices to a variable randomizes that slot. Keep references to props,
+# lighting and poses consistent across slots; the tool does not infer story logic.
+version: 2
+options:
+  json: true
+  output: null
+methods:
+  - random: 1
+
+command:
+  prompt: |-
+    ${time} ${place}
+
+    ${person1}
+
+    ${action}
+
+    ${composition}
+
+    ${dessin} ${effects}
+  negative_prompt: ''
+
+variables:
+  person1_identity:
+    - a maid in her early twenties
+  person1_hair:
+    - long brown hair with side-swept bangs
+  person1_eyes:
+    - dark eyes
+  person1_clothing:
+    - a black maid dress with a white apron and a white frilled maid headpiece
+
+  person1:
+    - >-
+      The person tending the garden is ${person1_identity}, wearing ${person1_clothing}.
+      She has ${person1_hair} and ${person1_eyes}.
+      Most of her hair falls down her back, while a few loose strands curve
+      beside her cheek. Her expression is calm and absorbed, with her gaze
+      lowered toward the plants rather than directed at the viewer.
+
+  time:
+    - >-
+      It is early evening, and the last low sunlight reaches across the garden.
+      The sky is still bright enough to show the colours of the flowers,
+      but the shaded ground has begun to take on cooler tones.
+
+  place:
+    - >-
+      In a secluded corner of a mansion's garden, a narrow stone path curves
+      around a small flower bed bordered by neatly trimmed hedges.
+      The mansion is visible beyond the hedge, softened by distance and partly
+      hidden by foliage. A small wicker basket rests on the path beside the
+      flower bed, within easy reach of the person tending it.
+
+  action:
+    - >-
+      She kneels at the edge of the bed and leans forward slightly to pull
+      weeds from between the flowers. One hand closes around a weed near
+      its base while the other steadies the surrounding soil, keeping the
+      delicate stems out of the way. A few freshly pulled weeds lie in the
+      basket. Her skirt gathers naturally around her knees, and the lower
+      edge of her apron brushes the grass. Small traces of soil on her
+      fingertips make the task feel practical and unhurried.
+
+  composition:
+    - >-
+      The view is from slightly above and to her side, showing her face,
+      both hands, the flower bed and the basket in the same frame.
+      Her figure occupies the foreground, while the curve of the path leads
+      toward the mansion in the background. Leaves near the edge of the
+      frame give the garden depth without obscuring her hands or expression.
+
+  dessin:
+    - >-
+      The scene is an anime-style illustration with expressive eyes,
+      carefully drawn hands and fine, controlled linework.
+      Broad, readable shapes define the figure, while smaller details are
+      reserved for the folds of the dress, the apron trim and the nearby plants.
+      Soft cel shading gives the clothing and hair volume without making
+      the image look photographic.
+
+  effects:
+    - >-
+      Warm light catches the edges of her brown hair and the upper folds
+      of the white apron. The hedge casts longer, cooler shadows across
+      the path, and dappled patches of light break up the grass around her.
+      The distant mansion is slightly less detailed than the foreground,
+      keeping attention on the maid and the small movements of her hands.
+      The overall mood is quiet and domestic, like an ordinary moment
+      at the end of a working day.
+
+profiles:
+  red_dress:
+    variables:
+      person1_clothing:
+        - a red one-piece dress with a white apron and a white frilled maid headpiece
+
+  alternate_action:
+    variables:
+      action:
+        - >-
+          She crouches beside the flower bed, examining a small cluster
+          of weeds before removing them. With one hand she parts the leaves
+          of a flowering plant; with the other she gently loosens the soil
+          around a root. The basket beside her already holds a few weeds.
+          Her apron folds over her lap, and a loose strand of brown hair
+          has slipped forward as she bends toward the ground. Her movements
+          are careful and deliberate, preserving the flowers around her.

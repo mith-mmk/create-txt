@@ -863,6 +863,31 @@ pwsh ./examples/test-model-switch.ps1 -AnimaModel "anima_2b.safetensors" -Illust
 Remove -DryRun to switch checkpoints in sequence. Add -Generate to run one
 t2i image after each switch. DryRun checks arguments and order without using
 the test server.
+## Long-form English prompt examples
+
+These offline examples build paragraphs instead of unordered tags. The YAML
+files contain reusable sentence blocks; the text files show their expanded output.
+
+| Example | YAML | Expanded English |
+| --- | --- | --- |
+| A maid weeding a mansion garden at dusk | [natural-language-maid.yaml](examples/natural-language-maid.yaml) | [Text](examples/natural-language-maid.txt) |
+| Three travellers with separate positions and belongings | [natural-language-spatial.yaml](examples/natural-language-spatial.yaml) | [Text](examples/natural-language-spatial.txt) |
+
+~~~sh
+python cp2.py examples/natural-language-maid.yaml --output outputs/natural-language-maid.json
+python cp2.py examples/natural-language-spatial.yaml --output outputs/natural-language-spatial.json
+~~~
+
+The maid sample separates `person1`, `time`, `place`, `action`, `dessin` and
+`effects`; `--profile red_dress` replaces the black dress, and
+`--profile alternate_action` changes the pose and hand movements as one paragraph.
+The spatial sample places A/Aria, B/Bram and C/Celia from the viewer's right to
+left. Aria's sword belongs in her own right hand and her shield in her left.
+All three face the viewer, so screen coordinates and anatomical handedness are
+defined separately. `--profile abc_left_to_right` swaps the outer screen positions
+while preserving each person's belongings and hand assignments. The examples
+verify text expansion only; image adherence needs a separate visual test.
+
 ## Parser
 
 Expressions inside \$\{ \} can be parsed.

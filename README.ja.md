@@ -852,6 +852,29 @@ pwsh ./examples/test-model-switch.ps1 -AnimaModel "anima_2b.safetensors" -Illust
 
 -DryRunを外すと各モデルを順番に切り替えます。-Generateを追加すると切替後に
 各モデルで1枚のt2iを実行します。DryRunは生成せず、引数と順序だけを確認します。
+## 長文英文プロンプトのサンプル
+
+タグの羅列ではなく、文章のまとまりから英文を組み立てるオフライン用サンプルです。
+YAMLには再利用できる文章ブロック、テキストには展開後の英文を保存しています。
+
+| サンプル | YAML | 展開後の英文 |
+| --- | --- | --- |
+| 夕方のお屋敷の庭で草むしりをするメイド | [natural-language-maid.yaml](examples/natural-language-maid.yaml) | [テキスト](examples/natural-language-maid.txt) |
+| 3人の位置関係と持ち物を分けた構図 | [natural-language-spatial.yaml](examples/natural-language-spatial.yaml) | [テキスト](examples/natural-language-spatial.txt) |
+
+~~~sh
+python cp2.py examples/natural-language-maid.yaml --output outputs/natural-language-maid.json
+python cp2.py examples/natural-language-spatial.yaml --output outputs/natural-language-spatial.json
+~~~
+
+メイドの例は`person1`・`time`・`place`・`action`・`dessin`・`effects`に分けています。
+`--profile red_dress`で黒い服から赤いワンピースへ、`--profile alternate_action`で
+姿勢と手の動きを含む段落全体を切り替えられます。
+3人の例は画面の右からA/Aria・B/Bram・C/Celiaを配置し、Aria本人の右手に剣、左手に盾を持たせます。
+全員を正面向きとして、「画面上の左右」と「本人の左右」を別々に指定しています。
+`--profile abc_left_to_right`は両端の人物の画面上の位置だけを入れ替え、持ち物と持つ手は維持します。
+確認済みなのは英文の展開です。生成画像が位置関係を守るかどうかは、別途目視で検証してください。
+
 ## パーサー
 
 「${ }」内の文は式として解析できます（${= }の中に式を書けます）。

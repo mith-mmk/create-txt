@@ -1,0 +1,129 @@
+# Long English prompt with three distinct people, screen positions and handedness.
+# Offline: python cp2.py examples/natural-language-spatial.yaml --output outputs/natural-language-spatial.json
+# Mirrored layout: add --profile abc_left_to_right (hand assignments stay unchanged).
+#
+# Default, from the viewer's RIGHT to LEFT: A / Aria, B / Bram, C / Celia.
+# All three face the viewer. "Right hand" always means that person's own right hand.
+# A's sword therefore appears to the left of A's torso; her shield appears to its right.
+# YAML variable names and A/B/C are authoring identifiers, not image labels.
+# Position and prop ownership are stated together in sentences, not as unordered tags.
+# These instructions describe intended relationships; image adherence needs visual checking.
+version: 2
+options:
+  json: true
+  output: null
+methods:
+  - random: 1
+
+command:
+  prompt: |-
+    ${scene}
+
+    ${layout}
+
+    ${person_a}
+
+    ${person_b}
+
+    ${person_c}
+
+    ${spatial_details}
+
+    ${dessin} ${effects}
+  negative_prompt: ''
+
+variables:
+  person_a_name:
+    - Aria
+  person_b_name:
+    - Bram
+  person_c_name:
+    - Celia
+  person_a_position:
+    - on the right side of the image
+  person_b_position:
+    - in the centre of the image
+  person_c_position:
+    - on the left side of the image
+  person_a_right_hand:
+    - a straight steel sword
+  person_a_left_hand:
+    - a round wooden shield with a steel rim
+
+  scene:
+    - >-
+      An anime-style illustration shows three adult travellers standing
+      on the same stone terrace outside a small castle gate at sunset.
+      The terrace is wide enough for all three to be seen from head to toe,
+      with a low parapet behind them and the open gate farther in the background.
+
+  layout:
+    - >-
+      ${person_a_name} stands ${person_a_position},
+      ${person_b_name} stands ${person_b_position}, and
+      ${person_c_name} stands ${person_c_position}.
+      They form a single row and face directly toward the viewer.
+      Small gaps separate their silhouettes, so each person's hands,
+      clothing and belongings can be distinguished.
+
+  person_a:
+    - >-
+      ${person_a_name} is a young woman with short auburn hair and a red
+      tabard worn over fitted silver armour. She holds ${person_a_right_hand}
+      in her right hand. Her left hand grips ${person_a_left_hand}.
+      Her right arm hangs slightly away from her body, with
+      the sword pointing diagonally downward toward a clear patch of stone.
+      Her left elbow is bent, bringing the shield in front of the left
+      side of her waist. Her face, sword hand and shield grip are visible.
+
+  person_b:
+    - >-
+      ${person_b_name} is a broad-shouldered man with dark curly hair,
+      a short beard and a brown travelling coat over a cream shirt.
+      He holds an unfolded parchment map in both hands at chest height.
+      His fingers grip opposite edges of the map, and its lower corners
+      curl gently toward his coat. His head is raised, allowing his
+      face to remain visible above the top edge of the parchment.
+
+  person_c:
+    - >-
+      ${person_c_name} is a tall woman with long pale-blonde hair,
+      a deep-blue cloak and a plain dark travelling dress.
+      She holds a wooden staff upright in her own right hand, with
+      its lower end resting on the terrace beside her right boot.
+      Her left hand is open at waist height in a small conversational
+      gesture. The staff belongs to her and remains beside her body,
+      clearly separate from the sword and shield carried by ${person_a_name}.
+
+  spatial_details:
+    - >-
+      Because they face forward, each person's own right hand appears
+      on the viewer's left side of that person's body.
+      ${person_b_name} stands between the two women, with all three pairs
+      of feet resting on the same line of paving stones. The weapons,
+      staff and map stay within their owners' immediate space, leaving
+      clear gaps between the figures. The castle gate rises behind
+      the group, while the terrace continues across the foreground.
+
+  dessin:
+    - >-
+      Clean anime linework and restrained cel shading define the figures,
+      with particular attention to the hands and the objects they hold.
+      The viewpoint is at chest height, and the framing includes the
+      complete sword blade, shield, map, staff and all three pairs of boots.
+
+  effects:
+    - >-
+      Warm sunset light enters from the upper left of the image,
+      tracing the edges of the armour and the folds of the blue cloak.
+      Soft shadows fall across the stone toward the lower right.
+      The distant gate is less detailed than the travellers, keeping
+      the three faces and their separate silhouettes easy to read.
+
+profiles:
+  abc_left_to_right:
+    variables:
+      person_a_position:
+        - on the left side of the image
+      person_c_position:
+        - on the right side of the image
