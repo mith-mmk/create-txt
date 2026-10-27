@@ -94,7 +94,7 @@ def test_cli_encoder_preserves_profile_vae(monkeypatch):
     ]
 
 
-@pytest.mark.parametrize("model", ["qwen-image-2.1", "moss"])
+@pytest.mark.parametrize("model", ["qwen-image-2.1", "moss", "moss-turbo"])
 def test_new_models_resolve_neo_modules(model, monkeypatch):
     monkeypatch.setattr(webui, "get_json", lambda *a, **k: [
         {"model_name": "encoder.safetensors", "filename": "/encoders/encoder.safetensors"},

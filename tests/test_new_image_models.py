@@ -14,6 +14,8 @@ from modules.prompt_v2 import create_text_v2
     ("qwen-image-2.1", "qwen_image", "EmptyLatentImage"),
     ("qwen-image2.1", "qwen_image", "EmptyLatentImage"),
     ("moss-image", "moss_image", "EmptyFlux2LatentImage"),
+    ("moss-turbo", "moss_image", "EmptyFlux2LatentImage"),
+    ("moss-image-turbo", "moss_image", "EmptyFlux2LatentImage"),
 ])
 @pytest.mark.parametrize("mode", ["txt2img", "img2img"])
 def test_new_model_graphs(family, clip_type, latent, mode):
@@ -54,6 +56,7 @@ def test_new_model_graphs(family, clip_type, latent, mode):
 @pytest.mark.parametrize("family,encoder,vae", [
     ("qwen-image-2.1", "qwen3vl_8b_int8_convrot.safetensors", "qwen_image_2.1_vae_bf16.safetensors"),
     ("moss", "qwen3.5_9b_w4a8_gptq.safetensors", "flux2-vae_small.safetensors"),
+    ("moss-turbo", "qwen3.5_9b_w4a8_gptq.safetensors", "flux2-vae_small.safetensors"),
 ])
 def test_runner_spec_and_defaults(family, encoder, vae):
     spec, merged = build_comfyui_spec({"prompt": "test"}, {
@@ -69,7 +72,7 @@ def test_runner_spec_and_defaults(family, encoder, vae):
     assert checker._normalize_sampler_config("euler", "simple") == ("euler", "simple")
 
 
-@pytest.mark.parametrize("model_type", ["qwen-image-2.1", "qwen-image-2.1-turbo", "moss"])
+@pytest.mark.parametrize("model_type", ["qwen-image-2.1", "qwen-image-2.1-turbo", "moss", "moss-turbo"])
 def test_comfy_dispatch_uses_resolved_profile_family(model_type, monkeypatch):
     from modules.comfyui import ComufyClient
 
@@ -89,15 +92,16 @@ def test_comfy_dispatch_uses_resolved_profile_family(model_type, monkeypatch):
     assert captured["text_encoder"] == "custom-encoder"
 
 
-def test_comfy_family_cli_override(monkeypatch):
+@pytest.mark.parametrize("family", ["moss-image", "moss-turbo", "moss-image-turbo"])
+def test_comfy_family_cli_override(monkeypatch, family):
     from modules.comfyui import ComufyClient
 
     captured = {}
     monkeypatch.setattr(ComufyClient, "txt2img", lambda payload, **kw: captured.update(kw["options"]) or True)
-    args = cp2.build_parser().parse_args(["--comfy", "--comfy-family", "moss-image", "input.yaml"])
+    args = cp2.build_parser().parse_args(["--comfy", "--comfy-family", family, "input.yaml"])
     cp2.dispatch_comfy(args, [], {}, {"_generation_context": {"model_type": "qwen-image-2.1"}},
                        cp2.normalize_comfy_args(args))
-    assert captured["workflow_family"] == "moss-image"
+    assert captured["workflow_family"] == family
 
 
 @pytest.mark.parametrize("profile,model_type,steps", [

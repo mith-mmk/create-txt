@@ -83,6 +83,8 @@ class WorkflowBuilderCore:
 
 
 def _family_defaults(family):
+    if family == "moss-turbo":
+        return _family_defaults("moss")
     if family == "qwen-image-2.1-turbo":
         result = _family_defaults("qwen-image-2.1")
         result.update(steps=8, cfg=1.0)
@@ -188,6 +190,7 @@ def _normalize_family_mode(options):
         "qwen21-turbo": "qwen-image-2.1-turbo",
         "qwen-image2.1-turbo": "qwen-image-2.1-turbo",
         "moss-image": "moss",
+        "moss-image-turbo": "moss-turbo",
     }
     family = aliases.get(family, family)
     mode = options.get("workflow_mode")

@@ -683,6 +683,7 @@ Derived families inherit the settings of their parent in the order shown.
 | qwen-image-2.1 | Qwen Image 2.1 (aliases: qwen-image2.1, qwen21) |
 | qwen-image-2.1-turbo | Inherits qwen-image-2.1 (aliases: qwen-image2.1-turbo, qwen21-turbo) |
 | moss | MOSS-Image Base/SFT (alias: moss-image) |
+| moss-turbo | Inherits moss (alias: moss-image-turbo) |
 | z-image | z-image-turbo |
 | anima | anima_2b, anima_2.9b, anima_3.8b, anima-edit |
 | ernie-image | ernie-image-turbo |
@@ -708,6 +709,10 @@ profile is independent and does not inherit `qwen-image`. The existing
 `qwen-image-2.0` key remains independent too. Checkpoint names containing
 `qwen_image_2.1`, `qwen-image2.1` or `qwen_image21` select Qwen 2.1;
 `moss` selects MOSS-Image. Explicit `--model-type` takes precedence.
+Names containing both `moss` and `turbo` select `moss-turbo`. Its profiles apply
+in the order `moss -> moss-turbo`, inheriting MOSS encoder/VAE settings and
+the MOSS workflow on Neo and ComfyUI. Set checkpoint-specific sampling values
+under `model_profile.moss-turbo`; omitted values inherit the MOSS settings.
 
 See [examples/qwen21-moss.yaml](examples/qwen21-moss.yaml) for both backends.
 For ComfyUI, `model_type` selects the new family automatically; an explicit

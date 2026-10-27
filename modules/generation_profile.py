@@ -52,6 +52,7 @@ MODEL_PARENTS = {
     "krea2-turbo-edit": "krea2-turbo",
     "krea2-raw-edit": "krea2-raw",
     "moss": None,
+    "moss-turbo": "moss",
     # Existing ComfyUI/WebUI families; deliberately rejected only on Neo.
     "sd2": None,
     "sd35": None,
@@ -81,6 +82,7 @@ MODEL_ALIASES = {
     "krea-2": "krea2",
     "anima_2.0b": "anima_2b",
     "moss-image": "moss",
+    "moss-image-turbo": "moss-turbo",
 }
 UI_TYPES = ("webui", "forge", "neo", "comfy")
 
@@ -174,7 +176,7 @@ def infer_model_type(name):
     ):
         return "sd15"
     if "moss" in name:
-        return "moss"
+        return "moss-turbo" if "turbo" in name else "moss"
     return None
 
 

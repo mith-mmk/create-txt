@@ -681,6 +681,7 @@ model_profileを省略します。オフライン生成ではAPIへ接続せず�
 | qwen-image-2.1 | Qwen Image 2.1（別名 qwen-image2.1、qwen21） |
 | qwen-image-2.1-turbo | qwen-image-2.1を継承（別名 qwen-image2.1-turbo、qwen21-turbo） |
 | moss | MOSS-Image Base/SFT（別名 moss-image） |
+| moss-turbo | mossを継承（別名 moss-image-turbo） |
 | z-image | z-image-turbo |
 | anima | anima_2b、anima_2.9b、anima_3.8b、anima-edit |
 | ernie-image | ernie-image-turbo |
@@ -704,6 +705,10 @@ Qwen 2.1は従来のQwen ImageとVAE・エンコーダーが異なるため、`q
 継承しない独立したprofileです。既存の`qwen-image-2.0`も独立して扱います。
 チェックポイント名の`qwen_image_2.1`・`qwen-image2.1`・`qwen_image21`から2.1を、
 `moss`からMOSSを判定します。`--model-type`で明示指定すると優先されます。
+名前に`moss`と`turbo`の両方を含む場合は`moss-turbo`と判定します。
+`moss → moss-turbo`の順でprofileを適用し、Neo・ComfyUIではMOSSの生成経路と
+エンコーダー・VAE設定を継承します。チェックポイント固有のサンプリング設定は
+`model_profile.moss-turbo`で指定し、省略した項目はMOSSの設定を引き継ぎます。
 
 両経路の設定例は[examples/qwen21-moss.yaml](examples/qwen21-moss.yaml)にあります。
 ComfyUIでは`model_type`から新しいfamilyを選び、明示した`--comfy-family`を優先します。

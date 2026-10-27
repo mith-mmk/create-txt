@@ -82,7 +82,7 @@ def test_new_model_profiles_are_independent(selected, profile, canonical):
     assert yml["options"]["text_encoder"] == "new-encoder"
 
 
-@pytest.mark.parametrize("alias,canonical", [("qwen-image2.1", "qwen-image-2.1"), ("moss-image", "moss")])
+@pytest.mark.parametrize("alias,canonical", [("qwen-image2.1", "qwen-image-2.1"), ("moss-image", "moss"), ("moss-image-turbo", "moss-turbo")])
 def test_new_model_duplicate_alias_rejected(alias, canonical):
     with pytest.raises(ValueError, match="Duplicate"):
         apply_generation_profiles({"model_profile": {alias: {}, canonical: {}}}, {})
@@ -295,6 +295,8 @@ ui_profile:
     ("qwen-image-2.10", "qwen-image"),
     ("moss_image_sft_int8_convrot.safetensors", "moss"),
     ("MOSS-Image-Base", "moss"),
+    ("MOSS-Image-Turbo.safetensors", "moss-turbo"),
+    (r"moss\moss_image_sft_turbo_int8.safetensors", "moss-turbo"),
     ("flux2-klein-9b", "flux2-klein-9b"), ("chroma1-hd", "chroma-hd"),
     ("NetaYume-Lumina", "netayume-lumina"), ("z_image_turbo", "z-image-turbo"),
     ("ernie-image-turbo", "ernie-image-turbo"), ("krea2-raw", "krea2-raw"),
@@ -315,6 +317,21 @@ def test_qwen21_turbo_inherits_base_modules():
     assert ctx["applied_profiles"] == ["model_profile.qwen-image-2.1", "model_profile.qwen-image-2.1-turbo"]
     assert yml["options"]["vae"] == "base-vae"
     assert yml["command"] == {"steps": 8, "cfg_scale": 1}
+
+
+@pytest.mark.parametrize("selected", ["moss-turbo", "moss-image-turbo"])
+def test_moss_turbo_inherits_moss_before_overrides(selected):
+    yml = {"options": {"model_type": selected}, "model_profile": {
+        "moss-image": {"options": {"vae": "moss-vae", "text_encoder": "moss-encoder"},
+                       "command": {"steps": 50, "width": 1024}},
+        "moss-turbo": {"command": {"steps": 12}},
+    }}
+    ctx = apply_generation_profiles(yml, {})
+    assert ctx["model_type"] == "moss-turbo"
+    assert ctx["applied_profiles"] == ["model_profile.moss", "model_profile.moss-turbo"]
+    assert yml["options"]["vae"] == "moss-vae"
+    assert yml["options"]["text_encoder"] == "moss-encoder"
+    assert yml["command"] == {"steps": 12, "width": 1024}
 
 
 def test_pony_inherits_sdxl():
