@@ -123,6 +123,8 @@ def infer_model_type(name):
         return "pony"
     if "illustri" in compact:
         return "illustrius"
+    if re.search(r"(?:^|/)il(?:_|/)", name):
+        return "illustrius"
     if "anima" in name and "animagine" not in name:
         version = next(
             (v for v in ("2.9b", "3.8b", "2b") if v.replace(".", "") in compact), None

@@ -284,6 +284,15 @@ ui_profile:
     (r"models\NoobAI-XL-v1.safetensors", "noobai"),
     (r"models\Pony-v6.safetensors", "pony"),
     ("waiIllustriousSDXL_v170", "illustrius"), ("sd_xl_base_1.0", "sdxl"),
+    ("Illustrious-XL-v1.0.safetensors", "illustrius"),
+    ("illustrius-model.safetensors", "illustrius"),
+    ("il_AsumaXL_V8", "illustrius"),
+    ("il_perfectOvanime_perfectOvanime", "illustrius"),
+    (r"E:\models\il\AsumaXL_V8.safetensors", "illustrius"),
+    ("models/il_AsumaXL_V8.safetensors", "illustrius"),
+    ("il_NoobAI-XL.safetensors", "noobai"),
+    ("il_Pony-v6.safetensors", "pony"),
+    ("oil_paintingXL.safetensors", None),
     ("anima_2.9b_fp8", "anima_2.9b"), ("Anima-3.8B", "anima_3.8b"),
     ("anima/Asuma_Anima_V1", "anima"), ("anima_2b-edit", "anima_2b-edit"),
     ("qwen_image_edit_2509", "qwen-image-edit"), ("flux1-kontext-dev", "flux-kontext"),
@@ -305,6 +314,22 @@ ui_profile:
 ])
 def test_model_names(name, expected):
     assert infer_model_type(name) == expected
+
+
+@pytest.mark.parametrize("checkpoint", ["waiIllustriousSDXL_v170", "il_AsumaXL_V8"])
+def test_illustrious_filename_applies_profile_modules(checkpoint):
+    yml = {
+        "options": {"model": checkpoint},
+        "model_profile": {
+            "sdxl": {"options": {"vae": "base-vae"}},
+            "illustrious": {"options": {"vae": None, "text_encoder": None}},
+        },
+    }
+    context = apply_generation_profiles(yml, {})
+    assert context["model_type"] == "illustrius"
+    assert context["applied_profiles"] == ["model_profile.sdxl", "model_profile.illustrius"]
+    assert yml["options"]["vae"] is None
+    assert yml["options"]["text_encoder"] is None
 
 
 def test_qwen21_turbo_inherits_base_modules():
