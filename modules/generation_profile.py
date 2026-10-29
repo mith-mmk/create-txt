@@ -392,6 +392,7 @@ def _checkpoint_profile_match(profiles, context):
 
 def resolve_module_option(value, options, *keys):
     """Use resolved profile options for an omitted/null module selection."""
+
     def omitted(item):
         return item is None or (
             isinstance(item, str) and item.strip().casefold() in ("", "none")
