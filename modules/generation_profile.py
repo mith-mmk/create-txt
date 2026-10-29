@@ -388,6 +388,23 @@ def _checkpoint_profile_match(profiles, context):
     return selected[0] if selected else None
 
 
+def resolve_module_option(value, options, *keys):
+    """Use resolved profile options for an omitted/null module selection."""
+    def omitted(item):
+        return item is None or (
+            isinstance(item, str) and item.strip().casefold() in ("", "none")
+        )
+
+    if not omitted(value):
+        return value
+    for key in keys:
+        if key in options:
+            candidate = options[key]
+            # Null in the resolved profile means use the built-in component.
+            return [] if omitted(candidate) else candidate
+    return None
+
+
 def apply_generation_profiles(yml, opt):
     """Called after the regular profile, before variables/methods are evaluated."""
     options = yml.get("options", {})

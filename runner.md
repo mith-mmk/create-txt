@@ -31,6 +31,22 @@ python runner.py examples/runner-example.yaml --script scripts/runner.dsl
 
 ## 設定ファイル
 
+`txt2img` の呼び出し側で `vae` / `text_encoder` が未指定、空欄、`None` の場合は、
+入力プロンプト YAML の `model_profile` などを適用した後の `options` を使います。
+プロファイル側の `options.vae` / `options.text_encoder` を `null`、`"None"`、`[]` にすると内蔵のものを使います。
+Forge Neoでは外部指定されたものだけを追加モジュールとして送り、前の指定を外します。
+SDXLでVAEとCLIPを両方内蔵から使う設定例（入力プロンプト YAML 側）:
+
+```yaml
+model_profile:
+  sdxl:
+    options:
+      vae: null
+      text_encoder: null
+```
+
+実際のファイル名の明示指定は優先し、明示的な `Automatic` は従来どおりの動作です。
+
 最小例:
 
 ```yaml

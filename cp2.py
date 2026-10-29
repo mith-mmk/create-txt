@@ -8,6 +8,7 @@ import sys
 from functools import lru_cache
 
 import modules.api as api
+from modules.generation_profile import resolve_module_option
 from modules.img2img import img2img
 from modules.interrogate import interrogate
 from modules.logger import getDefaultLogger
@@ -237,9 +238,15 @@ def get_parser_defaults():
 def resolve_arg_or_option(args, options, dest, option_key=None):
     option_key = option_key or dest
     value = getattr(args, dest, None)
-    if dest in getattr(args, "_explicit_args", set()):
-        return value
+    explicit = dest in getattr(args, "_explicit_args", set())
     default = get_parser_defaults().get(dest)
+    if dest in ("api_set_sd_vae", "text_encoder"):
+        if resolve_module_option(value, {}) is None:
+            return resolve_module_option(value, options, option_key)
+        if not explicit and value == default and option_key in options:
+            return resolve_module_option(None, options, option_key)
+    if explicit:
+        return value
     option_value = options.get(option_key)
     if value is not None and value != default:
         return value
@@ -485,8 +492,14 @@ def build_webui_config(args, options, yml):
             opt[key] = value
     opt["generation_context"] = yml.get("_generation_context", {})
     explicit_args = getattr(args, "_explicit_args", set())
-    opt["vae_explicit"] = "api_set_sd_vae" in explicit_args
-    opt["text_encoder_explicit"] = "text_encoder" in explicit_args
+    opt["vae_explicit"] = (
+        "api_set_sd_vae" in explicit_args
+        and resolve_module_option(args.api_set_sd_vae, {}) is not None
+    )
+    opt["text_encoder_explicit"] = (
+        "text_encoder" in explicit_args
+        and resolve_module_option(args.text_encoder, {}) is not None
+    )
     # Keep the old aggregate flag for integrations that use it directly.
     opt["modules_explicit"] = opt["vae_explicit"] or opt["text_encoder_explicit"]
     return opt

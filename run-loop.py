@@ -17,6 +17,7 @@ import create_prompts
 import img2img
 import modules.logger as logger
 import modules.share as share
+from modules.generation_profile import resolve_module_option
 
 # from modules.logger import Print
 
@@ -1045,6 +1046,10 @@ def run_txt2img(config, args=None):
                         "input": prompt_name,
                         "max_number": number,
                         "api_filename_variable": True,
+                        "api_mode": True,
+                        "api_base": host,
+                        "api_set_sd_model": model_name,
+                        "api_userpass": config.get("userpass"),
                     }
                     if profile is not None:
                         opt["profile"] = profile
@@ -1068,7 +1073,13 @@ def run_txt2img(config, args=None):
                 opt = options.copy()
                 opt["filename_pattern"] = file_pattern
                 opt["sd_model"] = model_name or result["options"].get("sd_model")
-                opt["sd_vae"] = vae or result["options"].get("sd_vae")
+                opt["sd_vae"] = resolve_module_option(
+                    vae, result["options"], "vae", "sd_vae"
+                )
+                opt["vae"] = opt["sd_vae"]
+                opt["text_encoder"] = resolve_module_option(
+                    options.get("text_encoder"), result["options"], "text_encoder"
+                )
                 opt["filename-variable"] = True
                 if config.get("userpass"):
                     opt["userpass"] = config.get("userpass")
@@ -1086,13 +1097,15 @@ def run_txt2img(config, args=None):
                     try:
                         start_time = time.time()
                         modules.api.set_sd_model(
-                            base_url=host, sd_model=model_name, sd_vae=vae
+                            base_url=host, sd_model=model_name, sd_vae=opt["sd_vae"],
+                            text_encoder=opt["text_encoder"],
                         )
                         end_time = time.time()
                         Logger.info(f"set model time {end_time - start_time} sec")
                     except Exception as e:
                         Logger.error("set model failed")
                         Logger.error(e)
+                        continue
                 # txt2img
                 Logger.debug(f"txt2img {opt}")
                 import modules.txt2img
@@ -1116,7 +1129,7 @@ def run_txt2img(config, args=None):
                     "--api-set-sd-model",
                     model_name,
                     "--api-set-sd-vae",
-                    vae,
+                    vae if vae is not None else "None",
                     "--api-filename-variable",
                     "--api-filename-pattern",
                     file_pattern,
@@ -1131,6 +1144,8 @@ def run_txt2img(config, args=None):
                     if profile is not None:
                         args.append("--profile")
                         args.append(profile)
+                if options.get("text_encoder") is not None:
+                    args.extend(["--text-encoder", options["text_encoder"]])
                 if overrides is not None and overrides != "":
                     args.extend(overrides)
                 if info is not None and info != "":
@@ -1139,7 +1154,12 @@ def run_txt2img(config, args=None):
                 Logger.verbose(args)
 
                 try:
-                    create_prompts.run_from_args(args)
+                    if version >= 2:
+                        import cp2
+
+                        cp2.run_from_args(args)
+                    else:
+                        create_prompts.run_from_args(args)
                 except Exception as e:
                     try:
                         Logger.debug(e)

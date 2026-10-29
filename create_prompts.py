@@ -15,6 +15,7 @@ from modules.interrogate import interrogate
 from modules.logger import getDefaultLogger
 from modules.prompt_v2 import create_text_v2, expand_arg
 from modules.txt2img import txt2img
+from modules.generation_profile import resolve_module_option
 
 Logger = getDefaultLogger()
 
@@ -206,9 +207,11 @@ def main(args):
             if args.api_set_sd_vae != "Automatic"
             else options.get("vae", options.get("sd_vae", "Automatic"))
         )
+        sd_vae = resolve_module_option(sd_vae, options, "vae", "sd_vae")
         text_encoder = options.get("text_encoder", "Automatic")
         if args.text_encoder != "Automatic":
             text_encoder = args.text_encoder
+        text_encoder = resolve_module_option(text_encoder, options, "text_encoder")
         opt["sd_model"] = sd_model
         opt["sd_vae"] = sd_vae
         opt["vae"] = sd_vae
